@@ -38,11 +38,67 @@ The drone spawns with a downward ToF (Garmin rangefinder), a Livox Mid-360, and 
 camera; the `goto` window flies it down the aisle centerline. See
 [inspection_sim/gazebo_sim/inspection_gazebo/README.md](inspection_sim/gazebo_sim/inspection_gazebo/README.md).
 
-## Install (apt / Docker)
+## Install
 
-Prebuilt packages are published to the project apt repository and a Docker image; see the
-packaging directories. The apt repo serves signed ROS Noetic `.deb`s; the Docker image
-bundles the runnable stack.
+### Option A — apt (ROS Noetic, Ubuntu 20.04)
+
+Requires a ROS Noetic install (`ros-noetic-desktop-full` recommended, for Gazebo/RViz). The
+inspection packages depend on the PAIRS UAV system, so add **both** signed apt repos — they
+share one PAIRS Lab signing key:
+
+```bash
+# signing key (one time)
+curl -fsSL https://thanhnguyencanh.github.io/apt/KEY.gpg \
+  | sudo gpg --dearmor -o /usr/share/keyrings/pairs.gpg
+
+# main PAIRS repo (dependencies: control, estimation, gazebo sim, ...)
+echo "deb [signed-by=/usr/share/keyrings/pairs.gpg] https://thanhnguyencanh.github.io/apt noetic main" \
+  | sudo tee /etc/apt/sources.list.d/pairs.list
+# inspection project repo
+echo "deb [signed-by=/usr/share/keyrings/pairs.gpg] https://thanhnguyencanh.github.io/pairs_drone_inspection_apt noetic main" \
+  | sudo tee /etc/apt/sources.list.d/pairs-inspection.list
+
+sudo apt update
+sudo apt install ros-noetic-inspection-core ros-noetic-inspection-gazebo
+```
+
+Then launch the simulation:
+
+```bash
+source /opt/ros/noetic/setup.bash
+roslaunch inspection_gazebo full_sim.launch                 # gazebo + warehouse + drone
+# or the full one-command bring-up (adds autonomy core + takeoff):
+roscd inspection_gazebo/tmux/warehouse && ./start.sh        # ./kill.sh to stop
+```
+
+### Option B — Docker (no host ROS install)
+
+The image bundles the full PAIRS UAV system **plus** the inspection packages:
+
+```bash
+docker pull thanhnc19/pairs_drone_inspection:noetic
+```
+
+Run it with GUI (RViz/Gazebo) and the GPU:
+
+```bash
+xhost +local:root
+docker run -it --rm --name pairs_inspection \
+  --net host --privileged --gpus all \
+  --env DISPLAY="$DISPLAY" --env QT_X11_NO_MITSHM=1 \
+  --volume /tmp/.X11-unix:/tmp/.X11-unix:rw \
+  thanhnc19/pairs_drone_inspection:noetic bash
+```
+
+Then, inside the container:
+
+```bash
+roscd inspection_gazebo/tmux/warehouse && ./start.sh        # ./kill.sh to stop
+```
+
+Drop `--gpus all` if you have no NVIDIA container runtime (Gazebo falls back to CPU
+rendering). Mount a host overlay workspace with `--volume <host>/pairs_ws:/opt/pairs_ws:rw`
+to develop your own packages on top.
 
 ## License
 
