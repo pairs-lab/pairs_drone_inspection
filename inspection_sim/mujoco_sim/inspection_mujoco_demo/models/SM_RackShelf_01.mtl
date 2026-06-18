@@ -1,0 +1,15 @@
+# File produced by Open Asset Import Library (http://www.assimp.sf.net)
+# (assimp v5.4.0)
+
+newmtl MI_RackSetC_01
+Kd 1 1 1
+illum 1
+
+newmtl MI_RackSetD_01
+Kd 1 1 1
+illum 1
+
+newmtl MI_RackSetA_01
+Kd 1 1 1
+illum 1
+

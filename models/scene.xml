@@ -1,0 +1,247 @@
+<mujoco model="pro_warehouse_demo">
+    <option timestep="0.01" gravity="0 0 -9.81"/>
+    <visual>
+        <headlight ambient="0.4 0.4 0.4" diffuse="0.6 0.6 0.6" specular="0.1 0.1 0.1"/>
+        <rgba haze="0.15 0.18 0.23 1"/>
+        <quality shadowsize="4096"/>
+    </visual>
+    <asset>
+        <mesh name="warehouse_mesh" file="warehouse.obj"/>
+        <mesh name="frame_mesh"     file="SM_RackFrame_03.obj"/>
+        <mesh name="box_mesh"       file="SM_CardBoxB_01_1051.obj"/>
+
+        <material name="mat_rack"  rgba="0.5 0.5 0.5 1" shininess="0.3"/>
+        <material name="mat_shelf" rgba="0.6 0.6 0.6 1"/>
+        <material name="mat_box"   rgba="0.72 0.58 0.42 1"/> 
+        <texture type="2d" name="floor_tex" builtin="checker" rgb1="0.22 0.25 0.28" rgb2="0.18 0.20 0.23" width="512" height="512"/>
+        <material name="floor_mat" texture="floor_tex" texrepeat="15 15" reflectance="0.1"/>
+        
+        <texture type="2d" name="tex_A1" file="qr_A1.png" />
+        <material name="mat_A1" texture="tex_A1"/>
+        <texture type="2d" name="tex_A2" file="qr_A2.png" />
+        <material name="mat_A2" texture="tex_A2"/>
+        <texture type="2d" name="tex_A3" file="qr_A3.png" />
+        <material name="mat_A3" texture="tex_A3"/>
+        <texture type="2d" name="tex_A4" file="qr_A4.png" />
+        <material name="mat_A4" texture="tex_A4"/>
+        <texture type="2d" name="tex_A5" file="qr_A5.png" />
+        <material name="mat_A5" texture="tex_A5"/>
+        <texture type="2d" name="tex_A6" file="qr_A6.png" />
+        <material name="mat_A6" texture="tex_A6"/>
+        <texture type="2d" name="tex_B1" file="qr_B1.png" />
+        <material name="mat_B1" texture="tex_B1"/>
+        <texture type="2d" name="tex_B2" file="qr_B2.png" />
+        <material name="mat_B2" texture="tex_B2"/>
+        <texture type="2d" name="tex_B3" file="qr_B3.png" />
+        <material name="mat_B3" texture="tex_B3"/>
+        <texture type="2d" name="tex_B4" file="qr_B4.png" />
+        <material name="mat_B4" texture="tex_B4"/>
+        <texture type="2d" name="tex_B5" file="qr_B5.png" />
+        <material name="mat_B5" texture="tex_B5"/>
+        <texture type="2d" name="tex_B6" file="qr_B6.png" />
+        <material name="mat_B6" texture="tex_B6"/>
+        <texture type="2d" name="tex_C1" file="qr_C1.png" />
+        <material name="mat_C1" texture="tex_C1"/>
+        <texture type="2d" name="tex_C2" file="qr_C2.png" />
+        <material name="mat_C2" texture="tex_C2"/>
+        <texture type="2d" name="tex_C3" file="qr_C3.png" />
+        <material name="mat_C3" texture="tex_C3"/>
+        <texture type="2d" name="tex_C4" file="qr_C4.png" />
+        <material name="mat_C4" texture="tex_C4"/>
+        <texture type="2d" name="tex_C5" file="qr_C5.png" />
+        <material name="mat_C5" texture="tex_C5"/>
+        <texture type="2d" name="tex_C6" file="qr_C6.png" />
+        <material name="mat_C6" texture="tex_C6"/>
+    </asset>
+    <worldbody>
+        <light name="ceiling_1" pos="1.2 -0.9 8" dir="0 0 -1" diffuse="0.8 0.8 0.8" specular="0.2 0.2 0.2" castshadow="true"/>
+        <light name="ceiling_2" pos="-2.0 -0.9 7" dir="0 0 -1" diffuse="0.5 0.5 0.5" castshadow="true"/>
+        <geom name="floor" type="plane" size="25 25 0.1" pos="0 -0.9 0" material="floor_mat"/>
+        
+        <geom type="box" size="10.0 0.1 2.5" pos="1.2 5.0 2.5" rgba="0.88 0.88 0.88 1"/>
+        <geom type="box" size="10.0 0.1 1.0" pos="1.2 5.0 6.0" rgba="0.92 0.62 0.08 1"/>
+        <geom type="box" size="10.0 0.1 2.5" pos="1.2 -8.0 2.5" rgba="0.88 0.88 0.88 1"/>
+        <geom type="box" size="10.0 0.1 1.0" pos="1.2 -8.0 6.0" rgba="0.92 0.62 0.08 1"/>
+        <geom type="box" size="0.1 6.5 2.5" pos="-8.8 -1.5 2.5" rgba="0.88 0.88 0.88 1"/>
+        <geom type="box" size="0.1 6.5 1.0" pos="-8.8 -1.5 6.0" rgba="0.92 0.62 0.08 1"/>
+        <geom type="box" size="0.1 6.5 2.5" pos="11.2 -1.5 2.5" rgba="0.88 0.88 0.88 1"/>
+        <geom type="box" size="0.1 6.5 1.0" pos="11.2 -1.5 6.0" rgba="0.92 0.62 0.08 1"/>
+
+        <body name="warehouse_env" pos="0 0 0"></body>
+        <body name="obstacle" pos="1.2 -0.9 0.3">
+            <geom type="box" size="0.35 0.35 0.3" rgba="0.55 0.35 0.20 1"/>
+        </body>
+
+        <body pos="1.2 0 0"><geom type="mesh" mesh="frame_mesh" material="mat_rack"/></body>
+        <body pos="1.2 0 0.030000000000000002"><geom type="box" size="1.6 0.45 0.02" material="mat_shelf"/></body>
+        <body pos="1.2 -0.45 0.04"><geom type="box" size="1.6 0.02 0.04" rgba="0.92 0.42 0.05 1"/></body>
+        <body pos="1.2 0 0.8300000000000001"><geom type="box" size="1.6 0.45 0.02" material="mat_shelf"/></body>
+        <body pos="1.2 -0.45 0.8400000000000001"><geom type="box" size="1.6 0.02 0.04" rgba="0.92 0.42 0.05 1"/></body>
+        <body pos="1.2 0 1.6300000000000001"><geom type="box" size="1.6 0.45 0.02" material="mat_shelf"/></body>
+        <body pos="1.2 -0.45 1.6400000000000001"><geom type="box" size="1.6 0.02 0.04" rgba="0.92 0.42 0.05 1"/></body>
+        <body pos="1.2 0 2.43"><geom type="box" size="1.6 0.45 0.02" material="mat_shelf"/></body>
+        <body pos="1.2 -0.45 2.4400000000000004"><geom type="box" size="1.6 0.02 0.04" rgba="0.92 0.42 0.05 1"/></body>
+        <body pos="1.2 0 3.23"><geom type="box" size="1.6 0.45 0.02" material="mat_shelf"/></body>
+        <body pos="1.2 -0.45 3.24"><geom type="box" size="1.6 0.02 0.04" rgba="0.92 0.42 0.05 1"/></body>
+        <body pos="1.2 0 4.03"><geom type="box" size="1.6 0.45 0.02" material="mat_shelf"/></body>
+        <body pos="1.2 -0.45 4.04"><geom type="box" size="1.6 0.02 0.04" rgba="0.92 0.42 0.05 1"/></body>
+        <body name="bin_A1" pos="0.0 0 0.05">
+            <geom name="geom_A1" type="mesh" mesh="box_mesh" rgba="0.72 0.58 0.42 1"/>
+            <geom type="plane" size="0.1 0.1 0.01" pos="0 -0.28 0.25" euler="90 0 0" material="mat_A1"/>
+        </body>
+        <body name="bin_A2" pos="0.0 0 0.8500000000000001">
+            <geom name="geom_A2" type="mesh" mesh="box_mesh" rgba="0.72 0.58 0.42 1"/>
+            <geom type="plane" size="0.1 0.1 0.01" pos="0 -0.28 0.25" euler="90 0 0" material="mat_A2"/>
+        </body>
+        <body name="bin_A3" pos="0.0 0 1.6500000000000001">
+            <geom name="geom_A3" type="mesh" mesh="box_mesh" rgba="0.72 0.58 0.42 1"/>
+            <geom type="plane" size="0.1 0.1 0.01" pos="0 -0.28 0.25" euler="90 0 0" material="mat_A3"/>
+        </body>
+        <body name="bin_A4" pos="0.0 0 2.45">
+            <geom name="geom_A4" type="mesh" mesh="box_mesh" rgba="0.72 0.58 0.42 1"/>
+            <geom type="plane" size="0.1 0.1 0.01" pos="0 -0.28 0.25" euler="90 0 0" material="mat_A4"/>
+        </body>
+        <body name="bin_A5" pos="0.0 0 3.25">
+            <geom name="geom_A5" type="mesh" mesh="box_mesh" rgba="0.72 0.58 0.42 1"/>
+            <geom type="plane" size="0.1 0.1 0.01" pos="0 -0.28 0.25" euler="90 0 0" material="mat_A5"/>
+        </body>
+        <body name="bin_A6" pos="0.0 0 4.05">
+            <geom name="geom_A6" type="mesh" mesh="box_mesh" rgba="0.72 0.58 0.42 1"/>
+            <geom type="plane" size="0.1 0.1 0.01" pos="0 -0.28 0.25" euler="90 0 0" material="mat_A6"/>
+        </body>
+        <body name="bin_B1" pos="1.2 0 0.05">
+            <geom name="geom_B1" type="mesh" mesh="box_mesh" rgba="0.72 0.58 0.42 1"/>
+            <geom type="plane" size="0.1 0.1 0.01" pos="0 -0.28 0.25" euler="90 0 0" material="mat_B1"/>
+        </body>
+        <body name="bin_B2" pos="1.2 0 0.8500000000000001">
+            <geom name="geom_B2" type="mesh" mesh="box_mesh" rgba="0.72 0.58 0.42 1"/>
+            <geom type="plane" size="0.1 0.1 0.01" pos="0 -0.28 0.25" euler="90 0 0" material="mat_B2"/>
+        </body>
+        <body name="bin_B3" pos="1.2 0 1.6500000000000001">
+            <geom name="geom_B3" type="mesh" mesh="box_mesh" rgba="0.72 0.58 0.42 1"/>
+            <geom type="plane" size="0.1 0.1 0.01" pos="0 -0.28 0.25" euler="90 0 0" material="mat_B3"/>
+        </body>
+        <body name="bin_B4" pos="1.2 0 2.45">
+            <geom name="geom_B4" type="mesh" mesh="box_mesh" rgba="0.72 0.58 0.42 1"/>
+            <geom type="plane" size="0.1 0.1 0.01" pos="0 -0.28 0.25" euler="90 0 0" material="mat_B4"/>
+        </body>
+        <body name="bin_B5" pos="1.2 0 3.25">
+            <geom name="geom_B5" type="mesh" mesh="box_mesh" rgba="0.72 0.58 0.42 1"/>
+            <geom type="plane" size="0.1 0.1 0.01" pos="0 -0.28 0.25" euler="90 0 0" material="mat_B5"/>
+        </body>
+        <body name="bin_B6" pos="1.2 0 4.05">
+            <geom name="geom_B6" type="mesh" mesh="box_mesh" rgba="0.72 0.58 0.42 1"/>
+            <geom type="plane" size="0.1 0.1 0.01" pos="0 -0.28 0.25" euler="90 0 0" material="mat_B6"/>
+        </body>
+        <body name="bin_C1" pos="2.4 0 0.05">
+            <geom name="geom_C1" type="mesh" mesh="box_mesh" rgba="0.72 0.58 0.42 1"/>
+            <geom type="plane" size="0.1 0.1 0.01" pos="0 -0.28 0.25" euler="90 0 0" material="mat_C1"/>
+        </body>
+        <body name="bin_C2" pos="2.4 0 0.8500000000000001">
+            <geom name="geom_C2" type="mesh" mesh="box_mesh" rgba="0.72 0.58 0.42 1"/>
+            <geom type="plane" size="0.1 0.1 0.01" pos="0 -0.28 0.25" euler="90 0 0" material="mat_C2"/>
+        </body>
+        <body name="bin_C3" pos="2.4 0 1.6500000000000001">
+            <geom name="geom_C3" type="mesh" mesh="box_mesh" rgba="0.72 0.58 0.42 1"/>
+            <geom type="plane" size="0.1 0.1 0.01" pos="0 -0.28 0.25" euler="90 0 0" material="mat_C3"/>
+        </body>
+        <body name="bin_C4" pos="2.4 0 2.45">
+            <geom name="geom_C4" type="mesh" mesh="box_mesh" rgba="0.72 0.58 0.42 1"/>
+            <geom type="plane" size="0.1 0.1 0.01" pos="0 -0.28 0.25" euler="90 0 0" material="mat_C4"/>
+        </body>
+        <body name="bin_C5" pos="2.4 0 3.25">
+            <geom name="geom_C5" type="mesh" mesh="box_mesh" rgba="0.72 0.58 0.42 1"/>
+            <geom type="plane" size="0.1 0.1 0.01" pos="0 -0.28 0.25" euler="90 0 0" material="mat_C5"/>
+        </body>
+        <body name="bin_C6" pos="2.4 0 4.05">
+            <geom name="geom_C6" type="mesh" mesh="box_mesh" rgba="0.72 0.58 0.42 1"/>
+            <geom type="plane" size="0.1 0.1 0.01" pos="0 -0.28 0.25" euler="90 0 0" material="mat_C6"/>
+        </body>
+
+        <body pos="1.2 -1.8 0"><geom type="mesh" mesh="frame_mesh" material="mat_rack" euler="0 0 180"/></body>
+        <body pos="1.2 -1.8 0.030000000000000002"><geom type="box" size="1.6 0.45 0.02" material="mat_shelf"/></body>
+        <body pos="1.2 -1.35 0.04"><geom type="box" size="1.6 0.02 0.04" rgba="0.92 0.42 0.05 1"/></body>
+        <body pos="1.2 -1.8 0.8300000000000001"><geom type="box" size="1.6 0.45 0.02" material="mat_shelf"/></body>
+        <body pos="1.2 -1.35 0.8400000000000001"><geom type="box" size="1.6 0.02 0.04" rgba="0.92 0.42 0.05 1"/></body>
+        <body pos="1.2 -1.8 1.6300000000000001"><geom type="box" size="1.6 0.45 0.02" material="mat_shelf"/></body>
+        <body pos="1.2 -1.35 1.6400000000000001"><geom type="box" size="1.6 0.02 0.04" rgba="0.92 0.42 0.05 1"/></body>
+        <body pos="1.2 -1.8 2.43"><geom type="box" size="1.6 0.45 0.02" material="mat_shelf"/></body>
+        <body pos="1.2 -1.35 2.4400000000000004"><geom type="box" size="1.6 0.02 0.04" rgba="0.92 0.42 0.05 1"/></body>
+        <body pos="1.2 -1.8 3.23"><geom type="box" size="1.6 0.45 0.02" material="mat_shelf"/></body>
+        <body pos="1.2 -1.35 3.24"><geom type="box" size="1.6 0.02 0.04" rgba="0.92 0.42 0.05 1"/></body>
+        <body pos="1.2 -1.8 4.03"><geom type="box" size="1.6 0.45 0.02" material="mat_shelf"/></body>
+        <body pos="1.2 -1.35 4.04"><geom type="box" size="1.6 0.02 0.04" rgba="0.92 0.42 0.05 1"/></body>
+        <body name="sec_bin_A1" pos="0.0 -1.8 0.05">
+            <geom name="geom_sec_A1" type="mesh" mesh="box_mesh" rgba="0.72 0.58 0.42 1" euler="0 0 180"/>
+        </body>
+        <body name="sec_bin_A2" pos="0.0 -1.8 0.8500000000000001">
+            <geom name="geom_sec_A2" type="mesh" mesh="box_mesh" rgba="0.72 0.58 0.42 1" euler="0 0 180"/>
+        </body>
+        <body name="sec_bin_A3" pos="0.0 -1.8 1.6500000000000001">
+            <geom name="geom_sec_A3" type="mesh" mesh="box_mesh" rgba="0.72 0.58 0.42 1" euler="0 0 180"/>
+        </body>
+        <body name="sec_bin_A4" pos="0.0 -1.8 2.45">
+            <geom name="geom_sec_A4" type="mesh" mesh="box_mesh" rgba="0.72 0.58 0.42 1" euler="0 0 180"/>
+        </body>
+        <body name="sec_bin_A5" pos="0.0 -1.8 3.25">
+            <geom name="geom_sec_A5" type="mesh" mesh="box_mesh" rgba="0.72 0.58 0.42 1" euler="0 0 180"/>
+        </body>
+        <body name="sec_bin_A6" pos="0.0 -1.8 4.05">
+            <geom name="geom_sec_A6" type="mesh" mesh="box_mesh" rgba="0.72 0.58 0.42 1" euler="0 0 180"/>
+        </body>
+        <body name="sec_bin_B1" pos="1.2 -1.8 0.05">
+            <geom name="geom_sec_B1" type="mesh" mesh="box_mesh" rgba="0.72 0.58 0.42 1" euler="0 0 180"/>
+        </body>
+        <body name="sec_bin_B2" pos="1.2 -1.8 0.8500000000000001">
+            <geom name="geom_sec_B2" type="mesh" mesh="box_mesh" rgba="0.72 0.58 0.42 1" euler="0 0 180"/>
+        </body>
+        <body name="sec_bin_B3" pos="1.2 -1.8 1.6500000000000001">
+            <geom name="geom_sec_B3" type="mesh" mesh="box_mesh" rgba="0.72 0.58 0.42 1" euler="0 0 180"/>
+        </body>
+        <body name="sec_bin_B4" pos="1.2 -1.8 2.45">
+            <geom name="geom_sec_B4" type="mesh" mesh="box_mesh" rgba="0.72 0.58 0.42 1" euler="0 0 180"/>
+        </body>
+        <body name="sec_bin_B5" pos="1.2 -1.8 3.25">
+            <geom name="geom_sec_B5" type="mesh" mesh="box_mesh" rgba="0.72 0.58 0.42 1" euler="0 0 180"/>
+        </body>
+        <body name="sec_bin_B6" pos="1.2 -1.8 4.05">
+            <geom name="geom_sec_B6" type="mesh" mesh="box_mesh" rgba="0.72 0.58 0.42 1" euler="0 0 180"/>
+        </body>
+        <body name="sec_bin_C1" pos="2.4 -1.8 0.05">
+            <geom name="geom_sec_C1" type="mesh" mesh="box_mesh" rgba="0.72 0.58 0.42 1" euler="0 0 180"/>
+        </body>
+        <body name="sec_bin_C2" pos="2.4 -1.8 0.8500000000000001">
+            <geom name="geom_sec_C2" type="mesh" mesh="box_mesh" rgba="0.72 0.58 0.42 1" euler="0 0 180"/>
+        </body>
+        <body name="sec_bin_C3" pos="2.4 -1.8 1.6500000000000001">
+            <geom name="geom_sec_C3" type="mesh" mesh="box_mesh" rgba="0.72 0.58 0.42 1" euler="0 0 180"/>
+        </body>
+        <body name="sec_bin_C4" pos="2.4 -1.8 2.45">
+            <geom name="geom_sec_C4" type="mesh" mesh="box_mesh" rgba="0.72 0.58 0.42 1" euler="0 0 180"/>
+        </body>
+        <body name="sec_bin_C5" pos="2.4 -1.8 3.25">
+            <geom name="geom_sec_C5" type="mesh" mesh="box_mesh" rgba="0.72 0.58 0.42 1" euler="0 0 180"/>
+        </body>
+        <body name="sec_bin_C6" pos="2.4 -1.8 4.05">
+            <geom name="geom_sec_C6" type="mesh" mesh="box_mesh" rgba="0.72 0.58 0.42 1" euler="0 0 180"/>
+        </body>
+        <body name="drone_body" mocap="true" pos="-3.0 -0.9 0.22">
+            <geom type="cylinder" size="0.06 0.025" rgba="0.1 0.6 0.8 1"/>
+            <geom type="capsule" size="0.008" fromto="0 0 0  0.15  0.15 0" rgba="0.4 0.4 0.4 1"/>
+            <geom type="capsule" size="0.008" fromto="0 0 0 -0.15  0.15 0" rgba="0.4 0.4 0.4 1"/>
+            <geom type="capsule" size="0.008" fromto="0 0 0 -0.15 -0.15 0" rgba="0.4 0.4 0.4 1"/>
+            <geom type="capsule" size="0.008" fromto="0 0 0  0.15 -0.15 0" rgba="0.4 0.4 0.4 1"/>
+            <geom type="cylinder" size="0.015 0.01" pos="0.15  0.15 0.01" rgba="0.8 0.1 0.1 1"/>
+            <geom type="cylinder" size="0.015 0.01" pos="-0.15  0.15 0.01" rgba="0.8 0.1 0.1 1"/>
+            <geom type="cylinder" size="0.015 0.01" pos="-0.15 -0.15 0.01" rgba="0.2 0.2 0.2 1"/>
+            <geom type="cylinder" size="0.015 0.01" pos="0.15 -0.15 0.01" rgba="0.2 0.2 0.2 1"/>
+            <geom type="box" size="0.09 0.008 0.001" pos="0.15  0.15 0.02" rgba="0.9 0.9 0.9 0.6"/>
+            <geom type="box" size="0.09 0.008 0.001" pos="-0.15  0.15 0.02" rgba="0.9 0.9 0.9 0.6"/>
+            <geom type="box" size="0.09 0.008 0.001" pos="-0.15 -0.15 0.02" rgba="0.9 0.9 0.9 0.6"/>
+            <geom type="box" size="0.09 0.008 0.001" pos="0.15 -0.15 0.02" rgba="0.9 0.9 0.9 0.6"/>
+            <geom type="box" size="0.015 0.015 0.015" pos="0 0.07 -0.015" rgba="0.1 0.1 0.1 1"/>
+            <camera name="fpv_cam" pos="0 0.09 -0.015" xyaxes="1 0 0 0 0 1" fovy="55"/>
+            <light name="drone_scanner_light" pos="0 0.1 -0.015" dir="0 1 0" diffuse="0.25 0.25 0.25" specular="0.05 0.05 0.05" active="true" castshadow="false"/>
+        </body>
+    </worldbody>
+</mujoco>
