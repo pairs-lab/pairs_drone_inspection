@@ -1,0 +1,27 @@
+# Isaac Sim internal scratch doc (not part of the published project)
+inspection_sim/isaac_sim/CLAUDE.md
+
+# catkin / ROS build artifacts
+build/
+devel/
+install/
+logs/
+.catkin_workspace
+
+# packaging artifacts
+**/packaging/output/
+*.deb
+*.ddeb
+*.buildinfo
+*.changes
+
+# python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+
+# editor / OS
+*.swp
+*~
+.DS_Store

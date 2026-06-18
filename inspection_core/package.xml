@@ -1,0 +1,21 @@
+<?xml version="1.0"?>
+<package format="2">
+  <name>inspection_core</name>
+  <version>0.0.0</version>
+  <description>
+    Inspection-specific autonomy layer for the warehouse cycle-count drone: the semantic
+    BIN map and (forthcoming) go-to-BIN mission logic that drive the PAIRS UAV system.
+    Mirrors kr_autonomous_flight/autonomy_core in organisation; built on PAIRS technique.
+  </description>
+
+  <maintainer email="canhthanh@vnu.edu.vn">Thanh Nguyen Canh</maintainer>
+  <license>BSD</license>
+
+  <buildtool_depend>catkin</buildtool_depend>
+
+  <!-- Mission node (added in the next step) calls the PAIRS ControlManager services. -->
+  <exec_depend>rospy</exec_depend>
+
+  <export>
+  </export>
+</package>

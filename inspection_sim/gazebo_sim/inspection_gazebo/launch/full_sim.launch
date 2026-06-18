@@ -1,0 +1,39 @@
+<?xml version="1.0"?>
+<!--
+  Top-level Gazebo bring-up for the warehouse inspection sim (kr-style full_sim).
+  1) starts Gazebo + the warehouse world (simulation.launch)
+  2) spawns ONE inspection drone with the downward ToF (Garmin rangefinder),
+     the Livox Mid-360, and a forward RealSense.
+
+  Usage:
+    roslaunch inspection_gazebo full_sim.launch
+    roslaunch inspection_gazebo full_sim.launch uav_type:=x500 gui:=true
+
+  The autonomy core (EstimationManager / ControlManager) is launched separately
+  (next integration step) once the drone is up.
+-->
+<launch>
+
+  <arg name="gui"      default="true" />
+  <arg name="uav_id"   default="1" />
+  <arg name="uav_type" default="x500" />
+  <!-- sensor flags passed to the PAIRS drone spawner (space-separated).
+       enable-rangefinder = downward Garmin ToF -> sensor_msgs/Range on hw_api/distance_sensor (AGL).
+       enable-livox       = Livox Mid-360 (primary LiDAR-inertial SLAM sensor).
+       enable-realsense-front = forward RGB-D (VIO backup / label-capture stand-in). -->
+  <arg name="sensors"  default="--enable-rangefinder --enable-livox --enable-realsense-front" />
+  <arg name="world_file" default="$(find inspection_gazebo)/worlds/warehouse.world" />
+
+  <!-- 1) Gazebo + warehouse world + spawner node -->
+  <include file="$(find inspection_gazebo)/launch/simulation.launch">
+    <arg name="gui"        value="$(arg gui)" />
+    <arg name="world_file" value="$(arg world_file)" />
+  </include>
+
+  <!-- 2) spawn the inspection drone once the spawner service is ready.
+       Args are split on whitespace into argv; the script reassembles the
+       single service-request string (avoids roslaunch quoting pitfalls). -->
+  <node name="spawn_inspection_uav" pkg="inspection_gazebo" type="spawn_inspection_uav.sh"
+        output="screen" args="$(arg uav_id) $(arg uav_type) $(arg sensors)" />
+
+</launch>

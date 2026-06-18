@@ -1,0 +1,25 @@
+<?xml version="1.0"?>
+<package format="2">
+  <name>inspection_gazebo</name>
+  <version>0.0.0</version>
+  <description>
+    Gazebo Classic simulation of the warehouse inspection environment: a narrow-aisle
+    pallet-racking world with AprilTag anchors and a fiducial charging dock, plus
+    launch files to spawn the inspection drone (downward ToF + Livox + camera).
+  </description>
+
+  <maintainer email="canhthanh@vnu.edu.vn">Thanh Nguyen Canh</maintainer>
+  <license>BSD</license>
+
+  <buildtool_depend>catkin</buildtool_depend>
+
+  <exec_depend>gazebo_ros</exec_depend>
+  <exec_depend>rosservice</exec_depend>
+  <exec_depend>pairs_gazebo_common_resources</exec_depend>
+  <exec_depend>pairs_uav_gazebo_simulation</exec_depend>
+
+  <export>
+    <gazebo_ros gazebo_model_path="${prefix}/models" />
+    <gazebo_ros gazebo_media_path="${prefix}/models" />
+  </export>
+</package>

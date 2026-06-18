@@ -1,0 +1,270 @@
+A1:
+  pallet_pose:
+    position:
+    - 0.0
+    - 0.0
+    - 0.0
+    yaw_deg: 0.0
+  part_no: PN-A01
+  qty: 11
+  scan_pose:
+    position:
+    - 0.0
+    - -1.0
+    - 0.25
+    yaw_deg: 90.0
+A2:
+  pallet_pose:
+    position:
+    - 0.0
+    - 0.0
+    - 0.8
+    yaw_deg: 0.0
+  part_no: PN-A02
+  qty: 12
+  scan_pose:
+    position:
+    - 0.0
+    - -1.0
+    - 1.05
+    yaw_deg: 90.0
+A3:
+  pallet_pose:
+    position:
+    - 0.0
+    - 0.0
+    - 1.6
+    yaw_deg: 0.0
+  part_no: PN-A03
+  qty: 13
+  scan_pose:
+    position:
+    - 0.0
+    - -1.0
+    - 1.85
+    yaw_deg: 90.0
+A4:
+  pallet_pose:
+    position:
+    - 0.0
+    - 0.0
+    - 2.4000000000000004
+    yaw_deg: 0.0
+  part_no: PN-A04
+  qty: 14
+  scan_pose:
+    position:
+    - 0.0
+    - -1.0
+    - 2.6500000000000004
+    yaw_deg: 90.0
+A5:
+  pallet_pose:
+    position:
+    - 0.0
+    - 0.0
+    - 3.2
+    yaw_deg: 0.0
+  part_no: PN-A05
+  qty: 15
+  scan_pose:
+    position:
+    - 0.0
+    - -1.0
+    - 3.45
+    yaw_deg: 90.0
+A6:
+  pallet_pose:
+    position:
+    - 0.0
+    - 0.0
+    - 4.0
+    yaw_deg: 0.0
+  part_no: PN-A06
+  qty: 16
+  scan_pose:
+    position:
+    - 0.0
+    - -1.0
+    - 4.25
+    yaw_deg: 90.0
+B1:
+  pallet_pose:
+    position:
+    - 1.2
+    - 0.0
+    - 0.0
+    yaw_deg: 0.0
+  part_no: PN-B01
+  qty: 17
+  scan_pose:
+    position:
+    - 1.2
+    - -1.0
+    - 0.25
+    yaw_deg: 90.0
+B2:
+  pallet_pose:
+    position:
+    - 1.2
+    - 0.0
+    - 0.8
+    yaw_deg: 0.0
+  part_no: PN-B02
+  qty: 18
+  scan_pose:
+    position:
+    - 1.2
+    - -1.0
+    - 1.05
+    yaw_deg: 90.0
+B3:
+  pallet_pose:
+    position:
+    - 1.2
+    - 0.0
+    - 1.6
+    yaw_deg: 0.0
+  part_no: PN-B03
+  qty: 19
+  scan_pose:
+    position:
+    - 1.2
+    - -1.0
+    - 1.85
+    yaw_deg: 90.0
+B4:
+  pallet_pose:
+    position:
+    - 1.2
+    - 0.0
+    - 2.4000000000000004
+    yaw_deg: 0.0
+  part_no: PN-B04
+  qty: 20
+  scan_pose:
+    position:
+    - 1.2
+    - -1.0
+    - 2.6500000000000004
+    yaw_deg: 90.0
+B5:
+  pallet_pose:
+    position:
+    - 1.2
+    - 0.0
+    - 3.2
+    yaw_deg: 0.0
+  part_no: PN-B05
+  qty: 21
+  scan_pose:
+    position:
+    - 1.2
+    - -1.0
+    - 3.45
+    yaw_deg: 90.0
+B6:
+  pallet_pose:
+    position:
+    - 1.2
+    - 0.0
+    - 4.0
+    yaw_deg: 0.0
+  part_no: PN-B06
+  qty: 22
+  scan_pose:
+    position:
+    - 1.2
+    - -1.0
+    - 4.25
+    yaw_deg: 90.0
+C1:
+  pallet_pose:
+    position:
+    - 2.4
+    - 0.0
+    - 0.0
+    yaw_deg: 0.0
+  part_no: PN-C01
+  qty: 23
+  scan_pose:
+    position:
+    - 2.4
+    - -1.0
+    - 0.25
+    yaw_deg: 90.0
+C2:
+  pallet_pose:
+    position:
+    - 2.4
+    - 0.0
+    - 0.8
+    yaw_deg: 0.0
+  part_no: PN-C02
+  qty: 24
+  scan_pose:
+    position:
+    - 2.4
+    - -1.0
+    - 1.05
+    yaw_deg: 90.0
+C3:
+  pallet_pose:
+    position:
+    - 2.4
+    - 0.0
+    - 1.6
+    yaw_deg: 0.0
+  part_no: PN-C03
+  qty: 25
+  scan_pose:
+    position:
+    - 2.4
+    - -1.0
+    - 1.85
+    yaw_deg: 90.0
+C4:
+  pallet_pose:
+    position:
+    - 2.4
+    - 0.0
+    - 2.4000000000000004
+    yaw_deg: 0.0
+  part_no: PN-C04
+  qty: 26
+  scan_pose:
+    position:
+    - 2.4
+    - -1.0
+    - 2.6500000000000004
+    yaw_deg: 90.0
+C5:
+  pallet_pose:
+    position:
+    - 2.4
+    - 0.0
+    - 3.2
+    yaw_deg: 0.0
+  part_no: PN-C05
+  qty: 27
+  scan_pose:
+    position:
+    - 2.4
+    - -1.0
+    - 3.45
+    yaw_deg: 90.0
+C6:
+  pallet_pose:
+    position:
+    - 2.4
+    - 0.0
+    - 4.0
+    yaw_deg: 0.0
+  part_no: PN-C06
+  qty: 28
+  scan_pose:
+    position:
+    - 2.4
+    - -1.0
+    - 4.25
+    yaw_deg: 90.0

@@ -1,0 +1,12 @@
+name: perception
+channels: [conda-forge]
+dependencies:
+  - python=3.11
+  - pip
+  - zbar
+  - pip:
+      - ultralytics
+      - opencv-python
+      - pyzbar
+      - PyYAML
+      - pytest

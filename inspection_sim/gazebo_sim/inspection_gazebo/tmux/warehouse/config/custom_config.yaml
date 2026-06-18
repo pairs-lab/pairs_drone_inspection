@@ -1,0 +1,28 @@
+pairs_uav_managers:
+
+  estimation_manager:
+
+    # loaded state estimator plugins.
+    # Step 1 (this session) flies on sim-GPS for a reliable warehouse bring-up.
+    # Step 2 (GPS-denied SLAM): add "point_lio" / "liosam" here and set it as the
+    # initial_state_estimator once validated in the aisle (Livox is already enabled).
+    state_estimators: [
+      "gps_garmin",
+      "gps_baro",
+    ]
+
+    initial_state_estimator: "gps_garmin" # will be used as the first state estimator
+    agl_height_estimator: "garmin_agl" # only slightly filtered height for checking min height (not used in control feedback)
+
+  uav_manager:
+
+    takeoff:
+
+      during_takeoff:
+        controller: "MpcController"
+        tracker: "LandoffTracker"
+
+      after_takeoff:
+        controller: "MpcController" # more robust
+        # controller: "Se3Controller" # more precise
+        tracker: "MpcTracker"

@@ -1,0 +1,20 @@
+<?xml version="1.0"?>
+<!--
+  Brings up Gazebo Classic with the warehouse world (and the PAIRS drone spawner
+  node). Mirrors kr_autonomous_flight's autonomy_sim/gazebo_sim/launch/simulation.launch:
+  this is the "world only" tier; full_sim.launch adds the drone.
+-->
+<launch>
+
+  <arg name="gui"       default="true" />
+  <arg name="paused"    default="false" />
+  <arg name="world_file" default="$(find inspection_gazebo)/worlds/warehouse.world" />
+
+  <!-- delegate to the PAIRS gazebo simulator, pointing it at our warehouse world -->
+  <include file="$(find pairs_uav_gazebo_simulation)/launch/simulation.launch">
+    <arg name="world_file" value="$(arg world_file)" />
+    <arg name="gui"        value="$(arg gui)" />
+    <arg name="paused"     value="$(arg paused)" />
+  </include>
+
+</launch>
