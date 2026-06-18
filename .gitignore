@@ -1,4 +1,5 @@
-# Isaac Sim internal scratch doc (not part of the published project)
+# Local agent/editor settings (not part of the published project)
+.claude/
 inspection_sim/isaac_sim/CLAUDE.md
 
 # catkin / ROS build artifacts
