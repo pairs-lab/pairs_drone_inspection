@@ -771,15 +771,18 @@ function buildScene3D(s) {
   if (s.second_rack)  addRack(s.second_rack,  0x818cf8);
 
   // ---- Obstacle ----
-  if (s.obstacle) {
-    const ob = s.obstacle;
-    const cx = (ob.x_min+ob.x_max)/2, cy = (ob.y_min+ob.y_max)/2, cz = (ob.z_min+ob.z_max)/2;
-    const geo = new THREE.BoxGeometry(ob.x_max-ob.x_min, ob.y_max-ob.y_min, ob.z_max-ob.z_min);
-    const mat = new THREE.MeshLambertMaterial({color:0xf59e0b, transparent:true, opacity:0.45});
-    const mesh = new THREE.Mesh(geo, mat);
-    mesh.position.set(cx, cy, cz);
-    threeScene.add(mesh);
-  }
+  // Aisle floor obstacle removed from the live demo to match the Isaac scene
+  // (build_aisle_obstacle is no longer called in live_sim.py). To show it again,
+  // un-comment this block.
+  // if (s.obstacle) {
+  //   const ob = s.obstacle;
+  //   const cx = (ob.x_min+ob.x_max)/2, cy = (ob.y_min+ob.y_max)/2, cz = (ob.z_min+ob.z_max)/2;
+  //   const geo = new THREE.BoxGeometry(ob.x_max-ob.x_min, ob.y_max-ob.y_min, ob.z_max-ob.z_min);
+  //   const mat = new THREE.MeshLambertMaterial({color:0xf59e0b, transparent:true, opacity:0.45});
+  //   const mesh = new THREE.Mesh(geo, mat);
+  //   mesh.position.set(cx, cy, cz);
+  //   threeScene.add(mesh);
+  // }
 
   // ---- Bins ----
   (s.bins || []).forEach(b => {

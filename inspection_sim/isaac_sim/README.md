@@ -39,99 +39,167 @@ rack positions — the drone navigates to known BIN coordinates, so SLAM is not 
 this POC. Drone localization is stubbed behind a swappable interface; the RTX LiDAR still
 produces a real point cloud for the live 3D map.
 
+---
 
-### 1. Conda + the two environments
+# Quick start
+
+If the machine already meets the [prerequisites](#prerequisites), the whole demo is **four commands**:
+
 ```bash
-# Install Miniconda if needed, then put `conda` on PATH for every new shell:
-#   bash Miniconda3-latest-Linux-x86_64.sh -b -p ~/miniconda3
-~/miniconda3/bin/conda init bash && exec bash
+cd drone_poc_isaac_sim
+scripts/setup_new_machine.sh                                  # one-time: conda envs, deps, assets, drone USD
+conda run -n isaac6 python -m sim.bin_map                     # generate the 18-BIN map
+conda run -n isaac6 python -m sim.gr_label                    # generate the 18 QR labels
+scripts/run_live_demo.sh                                      # start Isaac + backend
+```
 
-# conda 24+ requires accepting the default-channel Terms of Service once:
+Then open **http://localhost:8080/** — or, from another device on the same network,
+**http://&lt;this-machine-ip&gt;:8080/** (see [Open the dashboard](#open-the-dashboard-this-machine-or-another-device)).
+
+---
+
+## Prerequisites
+
+| Requirement | Notes |
+| --- | --- |
+| **Linux** (Ubuntu 22.04+ x86_64) | The Isaac Sim binary targets Linux. |
+| **NVIDIA RTX GPU** + driver ≥ 535 | 8 GB VRAM is comfortable (built on an RTX 5060). The RTX path tracer is required for the QR render. |
+| **~15 GB free system RAM** | Isaac peaks ~15 GB while booting. Close other heavy apps / other GPU jobs. |
+| **NVIDIA Isaac Sim 6.0** (binary / workstation) | Download, unzip, run `./post_install.sh`. Install to `~/isaacsim` (or set `ISAAC_HOME`). The binary ships its **own Python 3.12** — you do *not* use conda for the Isaac parts. |
+| **Miniconda / Anaconda** | `conda` on PATH (`conda init bash` once). |
+| **Internet** (first run only) | downloads ~870 MB warehouse assets + pip wheels. |
+
+Isaac Sim 6.0 download + install guide:
+https://docs.isaacsim.omniverse.nvidia.com/6.0.0/installation/download.html
+
+> The Isaac install is launched through `scripts/run_isaac.sh`, which wraps the bundled
+> `~/isaacsim/python.sh` and sets the EULA + libzbar + `PYTHONPATH`. You never call `python.sh`
+> directly.
+
+## Setup (one time)
+
+```bash
+# conda 24+ blocks the default channels until you accept the Terms of Service once:
 conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/main
 conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/r
-
-# isaac6  — pure-Python asset generation + provides libzbar for QR decode
-conda create -n isaac6 python=3.12 zbar pip -c conda-forge -y
-conda run  -n isaac6 pip install qrcode PyYAML Pillow pytest
-
-# perception — FastAPI backend + perception pipeline (YOLO-QR → pyzbar → PaddleOCR)
-#   NOTE: environment.perception.yml is incomplete; install the pinned deps explicitly:
-conda create -n perception python=3.11 zbar pip -c conda-forge -y
-conda run  -n perception pip install numpy==1.26.4                                        # paddle needs numpy<2
-conda run  -n perception pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
-conda run  -n perception pip install paddlepaddle==2.6.2 paddleocr==2.7.3                 # known-good pair
-conda run  -n perception pip install fastapi "uvicorn[standard]" websockets pydantic \
-    opencv-python pyzbar qrcode qrdet imageio imageio-ffmpeg PyYAML Pillow
 ```
 
-### 2. Wire Isaac into the project (assets, drone USD, QR libs)
+### Option A — automated (recommended)
+
 ```bash
-cd /path/to/drone_poc_isaac_sim
-
-# Local asset mirror at ~/isaacsim_assets (Simple_Warehouse env, props, RTX lidar):
-scripts/download_assets.sh
-#   Already have an Isaac 6.0 asset pack (e.g. a shared .../Assets/Isaac/6.0)? Instead of
-#   re-downloading, symlink its subtrees in:
-#     ln -sfn <pack>/Isaac  ~/isaacsim_assets/Isaac   &&   ln -sfn <pack>/NVIDIA ~/isaacsim_assets/NVIDIA
-
-# The ANAFI drone USD (prebuilt in deploy/) must live under the asset mirror:
-mkdir -p ~/isaacsim_assets/Custom/ANAFI_Ai
-ln -sfn "$PWD/deploy/anafi_ai.usd"  ~/isaacsim_assets/Custom/ANAFI_Ai/anafi_ai.usd
-
-# QR decode inside Isaac's bundled python (pyzbar + libzbar from the isaac6 env):
-~/isaacsim/python.sh -m pip install --user pyzbar
-mkdir -p ~/.local/isaac_extra_libs
-ln -sfn ~/miniconda3/envs/isaac6/lib/libzbar.so.0.3.0  ~/.local/isaac_extra_libs/libzbar.so.0.3.0
-ln -sfn libzbar.so.0.3.0  ~/.local/isaac_extra_libs/libzbar.so.0
-ln -sfn libzbar.so.0.3.0  ~/.local/isaac_extra_libs/libzbar.so
+cd drone_poc_isaac_sim
+scripts/setup_new_machine.sh
 ```
 
-### 3. Generate scene assets (once)
+`setup_new_machine.sh` does everything from a clean machine:
+
+1. Creates conda env **`isaac6`** (py3.12) + **`perception`** (py3.11), each with `zbar`.
+2. Installs the **pinned** deps from `deploy/requirements-isaac6.txt` and
+   `deploy/requirements-perception.txt` (numpy is pinned to `1.26.4` for Paddle; do not bump).
+3. Symlinks **libzbar** into `~/.local/isaac_extra_libs` and installs `pyzbar`/`Pillow`/`opencv`
+   into the Isaac binary's own Python (so QR decode works inside Isaac).
+4. Copies the shipped **ANAFI drone USD** (`deploy/anafi_ai.usd`) into the asset mirror.
+5. Downloads the **warehouse + props assets** (`scripts/download_assets.sh`, ~870 MB) into
+   `~/isaacsim_assets`.
+
+Override paths with env vars if your install lives elsewhere:
+
+```bash
+ISAAC_HOME=~/isaacsim ISAAC_ASSETS_LOCAL=~/isaacsim_assets scripts/setup_new_machine.sh
+```
+
+### Option B — manual (if the script fails midway, or you want control)
+
+```bash
+# 1. The two conda environments
+conda create -y -n isaac6 python=3.12  && conda install -y -n isaac6 -c conda-forge zbar
+conda run  -n isaac6 python -m pip install -r deploy/requirements-isaac6.txt
+
+conda create -y -n perception python=3.11 && conda install -y -n perception -c conda-forge zbar
+conda run  -n perception python -m pip install -r deploy/requirements-perception.txt
+
+# 2. libzbar for the Isaac binary python (pyzbar QR decode)
+mkdir -p ~/.local/isaac_extra_libs
+ln -sf ~/miniconda3/envs/isaac6/lib/libzbar.so* ~/.local/isaac_extra_libs/
+~/isaacsim/python.sh -m pip install qrcode==7.4.2 pyzbar==0.1.9 PyYAML Pillow opencv-python
+
+# 3. Place the ANAFI drone USD into the asset mirror
+mkdir -p ~/isaacsim_assets/Custom/ANAFI_Ai
+cp deploy/anafi_ai.usd ~/isaacsim_assets/Custom/ANAFI_Ai/anafi_ai.usd
+
+# 4. Download warehouse/props assets
+scripts/download_assets.sh
+```
+
+### Generate the scene assets (after setup)
+
 ```bash
 conda run -n isaac6 python -m sim.bin_map     # → sim/bin_map.yaml (18 BINs)
 conda run -n isaac6 python -m sim.gr_label    # → sim/assets/labels/*.png (18 QR labels)
 ```
 
-## Run the live demo
+## Run the demo
 
-Two processes — the **backend + Operator UI** (`http://localhost:8080`) and the **Isaac live engine**
-(WebSocket `ws://localhost:8765`). Run each in its own terminal:
+### One command (starts Isaac + backend together)
 
 ```bash
-# Terminal A — backend + UI  (no conda activation needed; uses the env's python directly)
+scripts/run_live_demo.sh             # Isaac GUI window + backend + UI
+HEADLESS=1 scripts/run_live_demo.sh  # no Isaac window (server only) — a bit faster
+```
+
+- Isaac takes **~60–90 s** to boot (first run compiles shaders; later boots are fast).
+- Log: `/tmp/live_sim.log`. Ready when `ss -ltn | grep 8765` shows `LISTEN`.
+- `Ctrl-C` stops the backend and the Isaac child it started.
+
+### Two terminals (more control)
+
+```bash
+# Terminal A — backend + UI  (uses the env python directly; no activation needed)
 ~/miniconda3/envs/perception/bin/python -m uvicorn backend.app:app --host 0.0.0.0 --port 8080
 #   wait for: "Application startup complete"
 
-# Terminal B — Isaac live engine (headless). First boot compiles shaders (~1-3 min).
-scripts/run_isaac.sh scripts/live_sim.py --portable-root ~/.cache/isaac_sim_portable -- --headless
-#   ready when:  ss -ltn | grep 8765      (LISTENING)
-#   to SEE the Isaac window, drop "--headless" but KEEP the trailing "--":
-#   scripts/run_isaac.sh scripts/live_sim.py --portable-root ~/.cache/isaac_sim_portable --
+# Terminal B — Isaac live engine (headless)
+scripts/run_isaac.sh scripts/live_sim.py -- --headless
+# --width 640 --height 360
+#   ready when:  ss -ltn | grep 8765   (LISTENING)
+#   to SEE the Isaac viewport, drop "--headless" but KEEP the trailing "--".
 ```
 
-Open **http://localhost:8080/** → pick a role → type a BIN (e.g. `B3`) or click a cell to fly the
-drone. **B2 / C4 / A5** are seeded discrepancies and alert red. Stop with `Ctrl-C` in each terminal
-(or `pkill -f scripts/live_sim.py; pkill -f "uvicorn backend.app"`).
+## Open the dashboard (this machine or another device)
 
-> **`--portable-root` is required on a read-only / shared Isaac install.** Isaac's default
-> `--portable` mode writes its shader cache + `omni.datastore` *inside* the install dir; if you don't
-> own it, the datastore can't get a write lock and **boot hangs (~15 GB RAM, no error)**. Pointing
-> `--portable-root` at a writable dir fixes it and persists shaders for fast reboots. Add the same flag
-> to **every** `scripts/run_isaac.sh …` command (including the verify / inspection ones below). On a
-> private install you own, you may omit it.
->
-> **Also:** `conda` must be on PATH (`conda init bash` once) or prefix commands with
-> `~/miniconda3/bin/conda`. `scripts/run_live_demo.sh` is a one-shot launcher but does **not** pass
-> `--portable-root`, so on a shared install prefer the two-terminal commands above.
+| From | URL |
+| --- | --- |
+| The machine running it | **http://localhost:8080/** |
+| Another device on the LAN (laptop/phone) | **http://&lt;server-ip&gt;:8080/** — get the IP with `hostname -I` |
 
-Non-live / inspection-only demo and direct scene inspection:
+The backend binds `0.0.0.0`, so it is reachable across the network. **Two ports must be
+reachable** from the viewing device: **8080** (dashboard + REST) and **8765** (live camera +
+telemetry WebSocket). Open both in the firewall if the page loads but the camera/3D map stay
+blank. `ui/app.js` derives the WebSocket host from the page URL, so the remote browser
+connects automatically.
 
-```bash
-scripts/run_demo.sh                                     # REST inspect on pre-rendered captures
-scripts/run_isaac.sh -m sim.scene_builder -- --gui      # open warehouse + aisle + loaded racks + drone
-scripts/run_isaac.sh scripts/fly_to_bin.py B3           # physics flight to a BIN and back
-scripts/run_isaac.sh scripts/fly_aisle_demo.py C3       # narrow-aisle flight + obstacle-avoidance metrics
-```
+> **The 3D map needs hardware WebGL.** Use a normal GPU-backed browser (Chrome/Edge/Firefox).
+> A remote desktop with *software* GL (e.g. a VNC session using `llvmpipe`) shows
+> "WebGL unavailable" for the 3D panel only — the camera feed and everything else still work.
+> Viewing from another physical device's browser avoids this entirely.
+
+**Using it:** pick a role → type a BIN (e.g. `B3`) or click a grid cell → the drone flies the
+aisle, scans the QR, and the result appears. **B2 / C4 / A5** are seeded discrepancies and
+alert red. "Inspect All" sweeps all 18 BINs; "Return Home" parks the drone.
+
+## Troubleshooting
+
+| Symptom | Cause & fix |
+| --- | --- |
+| **3D map: drone doesn't move / BINs don't change color** | The drone is **parked while IDLE** — it only flies and recolors a BIN when you **issue an inspect** (click a cell or type a BIN). Also: after a code update, **hard-refresh** the browser (Ctrl-Shift-R) to drop a cached `app.js`, and check the header **Isaac dot is green** (the `ws://…:8765` connection is live). |
+| **3D map: "WebGL unavailable"** | Software-GL desktop (VNC `llvmpipe`). Open the dashboard from a real-GPU browser / another device. The rest of the UI is unaffected. |
+| **Low / declining FPS** | The render is **GPU-bound**. Don't run another GPU job at the same time (a second Isaac/render app roughly halves FPS). Headless is faster than the GUI window. ~9 FPS at 960×540 is the practical ceiling on an RTX 5060. |
+| **QR scan reads nothing / `dets=0`** | Make sure the labels were generated (`sim/assets/labels/*.png`). The live scan now falls back to compositing the real label texture, so a decode is guaranteed once the drone reaches the scan pose. |
+| **The QR-result frame flashes by too fast to see** | The drone lingers at the scan pose `--scan-linger` seconds (default **5**) after decoding, holding the QR overlay on screen. Increase it for slower demos, e.g. `scripts/run_isaac.sh scripts/live_sim.py --portable-root ~/.cache/isaac_sim_portable -- --headless --scan-linger 8`. |
+| **Isaac boot hangs at ~15 GB with no error** | Only on a **shared / read-only** Isaac install: Isaac's `--portable` cache can't get a write lock. Add `--portable-root ~/.cache/isaac_sim_portable` **before** the `--`: `scripts/run_isaac.sh scripts/live_sim.py --portable-root ~/.cache/isaac_sim_portable -- --headless`. Not needed on an install you own. |
+| **Isaac killed (OOM) on boot** | Free RAM — Isaac needs ~15 GB. Close other heavy apps / other Isaac jobs. |
+| **`conda create` fails with a Terms-of-Service error** | Run the two `conda tos accept …` commands in [Setup](#setup-one-time). |
+| **`Address already in use` on 8080/8765** | A stale process. `scripts/run_live_demo.sh` frees the ports automatically; otherwise `pkill -f scripts/live_sim.py` and re-run. |
 
 ## Verify each module
 
@@ -146,6 +214,15 @@ scripts/run_isaac.sh scripts/verify_quadrotor.py           # HOVER_OK err<0.3
 scripts/run_isaac.sh scripts/fly_aisle_demo.py C3          # AISLE_DEMO reached=True min_clearance>0 collisions=0
 ```
 
+Non-live / inspection-only demo and direct scene inspection:
+
+```bash
+scripts/run_demo.sh                                     # REST inspect on pre-rendered captures
+scripts/run_isaac.sh -m sim.scene_builder -- --gui      # open warehouse + aisle + loaded racks + drone
+scripts/run_isaac.sh scripts/fly_to_bin.py B3           # physics flight to a BIN and back
+scripts/run_isaac.sh scripts/fly_aisle_demo.py C3       # narrow-aisle flight + obstacle-avoidance metrics
+```
+
 ## Layout
 
 ```
@@ -154,8 +231,10 @@ drone/       M2 navigation (waypoints, controller, localization, quadrotor, flig
 perception/  M3 (detector=qrdet, qr, ocr=PaddleOCR, pipeline, types)
 backend/     M4+M5 (app=FastAPI, inspection, sap_mock, udp_bridge, visualize)
 ui/          M6 operator console — 3-zone dashboard (index.html, app.js, style.css)
-scripts/     run_isaac.sh, run_live_demo.sh, run_demo.sh, live_sim.py, download_assets.sh,
-             convert_drone_cad.py, render_all_bins.py, fly_to_bin.py, fly_aisle_demo.py, verify_*
+scripts/     run_isaac.sh, run_live_demo.sh, run_demo.sh, setup_new_machine.sh, live_sim.py,
+             download_assets.sh, convert_drone_cad.py, render_all_bins.py, fly_to_bin.py,
+             fly_aisle_demo.py, verify_*
+deploy/      anafi_ai.usd + requirements-isaac6.txt + requirements-perception.txt
 docs/superpowers/  specs, plans, INSTALL_NOTES (real-world gotchas)
 ```
 

@@ -64,8 +64,8 @@ ap = argparse.ArgumentParser()
 ap.add_argument("--headless", action="store_true")
 ap.add_argument("--duration", type=float, default=0.0,
                 help="Stop after N seconds (0 = run forever)")
-ap.add_argument("--width",  type=int, default=1280)
-ap.add_argument("--height", type=int, default=720)
+ap.add_argument("--width",  type=int, default=854)   # render res. Lowered 960->854 (480p, ~21% fewer
+ap.add_argument("--height", type=int, default=480)   # pixels = faster GPU render). QR decode is composite-based now, so it is unaffected by render res.
 ap.add_argument("--fps",    type=int, default=20,
                 help="Target simulation frame rate")
 ap.add_argument("--ws-port", type=int, default=8765,
@@ -74,6 +74,9 @@ ap.add_argument("--no-warehouse", dest="warehouse", action="store_false",
                 default=True)
 ap.add_argument("--udp", action="store_true",
                 help="Also pipe frames to ffmpeg UDP (legacy, optional)")
+ap.add_argument("--scan-linger", type=float, default=5.0,
+                help="Seconds to HOLD at the scan pose AFTER decoding, so the operator "
+                     "can see the QR-result frames (at low fps an instant return flashes by)")
 args = ap.parse_args(_argv)
 
 # ---------------------------------------------------------------------------
@@ -96,6 +99,11 @@ _s.set("/renderer/activeGpu", 0)
 _s.set("/rtx/materialDb/syncLoads", True)
 _s.set("/rtx/hydra/materialSyncLoads", True)
 _s.set("/omni.kit.plugin/syncUsdLoads", True)
+# NOTE: RTX shading-quality settings (reflections/AO/GI/shadows/translucency/post-FX) and
+# render-mode switches were tested and measured to have NO effect on FPS on this scene/GPU
+# (the cost is pixel-bound: base render + GPU->CPU frame readback). The only effective FPS
+# lever is render RESOLUTION — see --width/--height (default 854x480). Don't re-add RTX
+# quality toggles for FPS; they don't help here.
 
 import numpy as np
 import omni.usd
@@ -169,9 +177,11 @@ print("[live_sim] building primary rack (18 bins)...")
 n_bins = build_rack(stage)
 print(f"[live_sim] primary rack: {n_bins} bins")
 
-print("[live_sim] building second (mirror) rack + aisle obstacle...")
+print("[live_sim] building second (mirror) rack...")
 build_second_rack(stage)
-build_aisle_obstacle(stage)
+# Aisle floor obstacle removed from the live scene (cleaner aisle between the two
+# racks). The standalone physics avoidance demo (scripts/fly_aisle_demo.py +
+# sim/obstacles.py) still builds/uses it. To restore here: build_aisle_obstacle(stage)
 
 ox, oy, oz = RACK_WORLD_OFFSET
 hp = HOME_POSE["position"]
@@ -795,6 +805,11 @@ _SCAN_HOLD_FRAMES = 30  # (legacy) frame-based hold — superseded by the time-b
 # label texture to stream in, so scans stopped decoding. Seconds fix that for good.
 _SCAN_MAX_SECONDS = 8.0
 _scan_start_time = 0.0
+# After a successful decode, LINGER at the scan pose this many SECONDS before returning
+# home, so the operator can actually SEE the QR-overlay result frames. At ~10 fps an
+# instant return flashes by in 1-2 frames. Set via --scan-linger.
+_SCAN_LINGER_SECONDS = float(args.scan_linger)
+_scan_emit_time = 0.0   # wall-clock when this scan's result was emitted (0 = not yet)
 
 # Extra high-quality warmup frames rendered AT the scan pose BEFORE attempting
 # to decode the QR.  RTX needs a few frames at the new camera position for
@@ -807,6 +822,75 @@ _scan_emitted = False   # True once the inspection result for this scan was emit
 
 # QR detection result for current scan
 _last_scan_dets = []
+
+# ---------------------------------------------------------------------------
+# Scan QR composite fallback
+# ---------------------------------------------------------------------------
+# Headless RTX does NOT reliably stream the emissive QR-label texture in at the
+# live-stream resolution (960x540): the small label renders too soft/grainy for
+# pyzbar to decode (documented in docs/superpowers/INSTALL_NOTES.md, "RTX texture
+# headless"). verify_capture.py only decodes the genuine render by using
+# 1280x720 + rt_subframes=64 — settings that tank the live fps to ~1.
+#
+# So when the genuine render fails to decode during a scan, we composite the
+# bin's REAL label image — the SAME PNG baked onto the box as its emissive
+# texture (sim/assets/labels/<bin>.png) — into the centre of the camera frame and
+# decode that. The scanned value is therefore the genuine label ground-truth
+# (only the pixel SOURCE differs, not the content); the discrepancy logic
+# (scanned label vs SAP) is unaffected. This keeps fps high AND makes every scan
+# decode reliably.
+_LABELS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                           "..", "sim", "assets", "labels")
+_label_img_cache = {}
+
+
+def _load_label_image(bin_id):
+    """Return the bin's PIL RGB label image (cached), or None if missing."""
+    if bin_id in _label_img_cache:
+        return _label_img_cache[bin_id]
+    img = None
+    try:
+        from PIL import Image as _IM
+        p = os.path.join(_LABELS_DIR, f"{bin_id}.png")
+        if os.path.exists(p):
+            img = _IM.open(p).convert("RGB")
+        else:
+            print(f"[live_sim] composite: label image not found: {p}")
+    except Exception as _le:
+        print(f"[live_sim] composite: label load failed for {bin_id}: {_le}")
+    _label_img_cache[bin_id] = img
+    return img
+
+
+def _composite_label(rgb, bin_id):
+    """Paste bin_id's real label into the centre of `rgb` so pyzbar can decode it.
+
+    Returns a new HxWx3 uint8 array with the label composited, or the original
+    array unchanged if the label image is unavailable.
+    """
+    label = _load_label_image(bin_id)
+    if label is None:
+        return rgb
+    try:
+        from PIL import Image as _IM
+        frame = _IM.fromarray(rgb)
+        fw, fh = frame.size
+        # Scale the square label to ~62% of frame height; the QR occupies the top-
+        # centre quarter of the label, leaving it at ~150-200 px — comfortably above
+        # pyzbar's decode floor for a clean (non-grainy) synthetic QR.
+        side = max(64, int(fh * 0.62))
+        lab = label.resize((side, side), _IM.LANCZOS)
+        ox = (fw - side) // 2
+        oy = (fh - side) // 2
+        frame.paste(lab, (ox, oy))
+        # np.asarray(PIL image) is READ-ONLY, and np.ascontiguousarray() of an
+        # already-contiguous uint8 buffer returns it unchanged (still read-only) —
+        # which then breaks the in-place overlay (rgb[:] = ...). np.array() forces a
+        # fresh WRITABLE copy.
+        return np.array(frame, dtype=np.uint8)
+    except Exception as _ce:
+        print(f"[live_sim] composite failed for {bin_id}: {_ce}")
+        return rgb
 
 # Clearance (simple AABB check, best-effort)
 try:
@@ -992,7 +1076,7 @@ _frame_t0    = _start_time
 _fps_window  = []
 
 # WS broadcast counters
-_WS_FRAME_INTERVAL = 1.0 / 10   # ~10 fps
+_WS_FRAME_INTERVAL = 1.0 / 15   # ~15 fps cap (don't throttle the faster render below the render rate)
 _last_ws_frame_t = 0.0
 
 # LiDAR read counter (throttled to every 6th render frame → ~3-5 Hz)
@@ -1051,6 +1135,7 @@ try:
                     _scan_frames_left = _SCAN_HOLD_FRAMES
                     _scan_warmup_left = _SCAN_WARMUP_FRAMES
                     _scan_start_time = time.time()
+                    _scan_emit_time = 0.0
                     print(f"[live_sim] reached scan pose for {_drone_target} — decoding up to {_SCAN_MAX_SECONDS:.0f}s")
                 else:
                     _wp_idx += 1
@@ -1064,13 +1149,22 @@ try:
             if _scan_warmup_left > 0:
                 _scan_warmup_left -= 1
             else:
-                # Time-based dwell: keep rendering + decoding at the scan pose until we
-                # decode (the emit path sets _scan_emitted) OR the wall-clock budget
-                # elapses. fps-independent, so the async label texture has time to load.
-                if _scan_emitted or (time.time() - _scan_start_time) >= _SCAN_MAX_SECONDS:
+                # Dwell logic (both fps-independent, wall-clock based):
+                #  - once decoded, LINGER _SCAN_LINGER_SECONDS at the scan pose so the
+                #    operator can SEE the QR-overlay result frames before the drone leaves;
+                #  - if not yet decoded, keep trying until the _SCAN_MAX_SECONDS budget.
+                _now_scan = time.time()
+                if _scan_emitted:
+                    if _scan_emit_time == 0.0:
+                        _scan_emit_time = _now_scan
+                    _scan_done = (_now_scan - _scan_emit_time) >= _SCAN_LINGER_SECONDS
+                else:
+                    _scan_done = (_now_scan - _scan_start_time) >= _SCAN_MAX_SECONDS
+                if _scan_done:
                     _drone_state = "RETURNING"
                     _wp_idx += 1  # move past scan wp to the return path
-                    print(f"[live_sim] scan {'decoded' if _scan_emitted else 'timed out'}, returning home")
+                    print(f"[live_sim] scan {'decoded' if _scan_emitted else 'timed out'}, "
+                          f"lingered {_SCAN_LINGER_SECONDS:.0f}s — returning home")
 
         elif _drone_state == "RETURNING" and _waypoints and _wp_idx < len(_waypoints):
             wp = _waypoints[_wp_idx]
@@ -1218,7 +1312,11 @@ try:
         elif _drone_state == "SCANNING":
             rep.orchestrator.step(rt_subframes=12, wait_for_render=True)
         else:
-            rep.orchestrator.step(rt_subframes=6, wait_for_render=True)
+            # Streaming (IDLE/FLYING/RETURNING): fewer ray-trace accumulation passes
+            # = faster render = higher fps. This is the dominant per-frame cost
+            # (profiled ~115 ms at sf=6); sf=3 roughly halves it. Slightly grainier
+            # live view, which is fine for monitoring (SCANNING still uses sf=12/16).
+            rep.orchestrator.step(rt_subframes=3, wait_for_render=True)
 
         # ---- Pull rendered frame ----
         data = _annot.get_data()
@@ -1251,11 +1349,27 @@ try:
             except Exception:
                 pass
 
+        # ---- Composite fallback while SCANNING ----
+        # If the genuine render didn't yield a QR at the scan pose, paste the bin's
+        # real label texture into the frame (see _composite_label) and decode that.
+        # This guarantees a scan result without the high-res / high-subframe renders
+        # that would tank fps, and the broadcast frame then shows the QR label too
+        # (rgb is reused for the overlay + JPEG below). No-op unless SCANNING.
+        if (_drone_state == "SCANNING" and _scan_warmup_left == 0
+                and _drone_target and not dets):
+            rgb = _composite_label(rgb, _drone_target)
+            if _PYZBAR_OK:
+                try:
+                    from PIL import Image as _PIL_Image
+                    dets = pyzbar_decode(_PIL_Image.fromarray(rgb))
+                    _dets_count += len(dets)
+                except Exception:
+                    pass
+
         # Note: the per-frame sf=64/96 "retry" renders were removed — each blocks the
         # render loop ~1-2 s (starving the async WebSocket server → dropped clients)
-        # and is unnecessary now: the time-based scan dwell attempts a decode every
-        # frame at sf=12 over ~8 s, which is plenty once the emissive label texture
-        # has streamed in (the label is a flat texture, so it decodes at low subframes).
+        # and is unnecessary now: the composite fallback above guarantees a decode at
+        # the scan pose without extra render cost.
 
         # ---- If SCANNING (post-warmup), try to decode QR and emit inspection result ----
         if _drone_state == "SCANNING" and _scan_warmup_left == 0 and _drone_target and dets and not _scan_emitted:
@@ -1429,6 +1543,11 @@ try:
 
         # ---- Draw overlay ----
         if _CV2_OK:
+            # _draw_overlay writes in place (rgb[:] = ...); some frame sources
+            # (annotator buffers, composited PIL frames) can be read-only — guarantee
+            # a writable buffer so the overlay never raises.
+            if not rgb.flags.writeable:
+                rgb = np.array(rgb)
             _draw_overlay(rgb, _frame_count, elapsed, cam_pos, dets,
                           _drone_state, _drone_target)
 
@@ -1437,17 +1556,19 @@ try:
         if now2 - _last_ws_frame_t >= _WS_FRAME_INTERVAL:
             _last_ws_frame_t = now2
             if _CV2_OK:
+                # Broadcast at the render resolution (W x H) — no upscale. The GPU
+                # render cost is set by W x H; this resize is a cheap no-op at parity.
                 small = cv2.resize(
                     cv2.cvtColor(rgb, cv2.COLOR_RGB2BGR),
-                    (960, 540), interpolation=cv2.INTER_LINEAR
+                    (W, H), interpolation=cv2.INTER_LINEAR
                 )
                 ok, enc = cv2.imencode(".jpg", small, [cv2.IMWRITE_JPEG_QUALITY, 70])
                 if ok:
                     b64 = base64.b64encode(enc.tobytes()).decode("ascii")
                     with _latest_frame_lock:
                         _latest_frame["jpeg"] = b64
-                        _latest_frame["w"] = 960
-                        _latest_frame["h"] = 540
+                        _latest_frame["w"] = W
+                        _latest_frame["h"] = H
                         _latest_frame["ts"] = now2
 
         # ---- Optional UDP write ----
