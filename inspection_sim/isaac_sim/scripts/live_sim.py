@@ -473,12 +473,34 @@ _annot = rep.AnnotatorRegistry.get_annotator("LdrColor")
 _annot.attach([_rp])
 
 
+# Remember the last camera pose so we can skip redundant updates (see below).
+_last_cam_pose = None
+
+
 def _update_cam_xform(cam_pos: tuple, look_at: tuple):
     """Move the replicator camera to cam_pos looking at look_at (up=+Z).
 
-    Uses rep.modify.pose() which is the correct API for Replicator cameras
-    and keeps the RTX material pipeline registered correctly.
+    Uses rep.modify.pose() — the API that keeps the RTX material pipeline
+    registered so the emissive QR labels render (a direct USD xform write is
+    faster but leaves the labels black, so scans fail to decode).
+
+    PERF: rep.modify.pose() accumulates OmniGraph state, so calling it EVERY
+    frame makes its cost grow without bound (profiled 32 ms -> 260 ms+), which is
+    what made the stream fps decay over time. The camera is stationary while IDLE
+    (parked at home) and only moves during FLYING/SCANNING/RETURNING, so we skip
+    the call when the pose is unchanged. That removes the per-frame cost during the
+    long IDLE periods (no decay) while still posing correctly whenever it moves.
     """
+    global _last_cam_pose
+    pose = (round(float(cam_pos[0]), 4), round(float(cam_pos[1]), 4), round(float(cam_pos[2]), 4),
+            round(float(look_at[0]), 4), round(float(look_at[1]), 4), round(float(look_at[2]), 4))
+    # Skip redundant calls (the fps fix) — EXCEPT while SCANNING. During the scan
+    # hold the pose is constant, but the repeated rep.modify.pose is what keeps the
+    # emissive QR label rendered so pyzbar can decode it, so we must keep calling it
+    # there. SCANNING is brief, so the bounded accumulation is harmless.
+    if pose == _last_cam_pose and _drone_state != "SCANNING":
+        return
+    _last_cam_pose = pose
     try:
         with _rep_cam:
             rep.modify.pose(
@@ -487,18 +509,14 @@ def _update_cam_xform(cam_pos: tuple, look_at: tuple):
                 look_at_up_axis=(0.0, 0.0, 1.0),
             )
     except Exception as _cam_e:
-        # Fallback: directly set xform ops on the underlying USD prim
+        # Fallback: directly set the translate op on the underlying USD prim.
         for _p in stage.Traverse():
             if _p.IsA(UsdGeom.Camera):
                 _pp = _p.GetPath().pathString
                 if "LiveStreamCam" in _pp or ("Camera_Xform" in _pp and "Replicator" in _pp):
                     _xf = UsdGeom.Xformable(_p)
-                    _ops = _xf.GetOrderedXformOps()
-                    # Find translate op or create
-                    _t_op = next(
-                        (o for o in _ops if o.GetOpType() == UsdGeom.XformOp.TypeTranslate),
-                        None
-                    )
+                    _t_op = next((o for o in _xf.GetOrderedXformOps()
+                                  if o.GetOpType() == UsdGeom.XformOp.TypeTranslate), None)
                     if _t_op is not None:
                         _t_op.Set(Gf.Vec3d(float(cam_pos[0]), float(cam_pos[1]), float(cam_pos[2])))
                     break
@@ -769,7 +787,14 @@ _ARRIVE_TOL = 0.15     # m
 
 # Scanning hold
 _scan_frames_left = 0
-_SCAN_HOLD_FRAMES = 30  # ~1.5 s at 20 fps
+_SCAN_HOLD_FRAMES = 30  # (legacy) frame-based hold — superseded by the time-based dwell below
+# Time-based scan dwell: linger at the scan pose attempting to decode for up to this
+# many wall-clock SECONDS (independent of stream fps), returning early once decoded.
+# A frame-count hold is fps-dependent: after the camera-pose fps fix raised fps ~5x,
+# a 30-frame hold shrank from ~15 s to ~4 s — too short for the async RTX emissive
+# label texture to stream in, so scans stopped decoding. Seconds fix that for good.
+_SCAN_MAX_SECONDS = 8.0
+_scan_start_time = 0.0
 
 # Extra high-quality warmup frames rendered AT the scan pose BEFORE attempting
 # to decode the QR.  RTX needs a few frames at the new camera position for
@@ -1025,7 +1050,8 @@ try:
                     _drone_state = "SCANNING"
                     _scan_frames_left = _SCAN_HOLD_FRAMES
                     _scan_warmup_left = _SCAN_WARMUP_FRAMES
-                    print(f"[live_sim] reached scan pose for {_drone_target} — warming up {_SCAN_WARMUP_FRAMES} frames")
+                    _scan_start_time = time.time()
+                    print(f"[live_sim] reached scan pose for {_drone_target} — decoding up to {_SCAN_MAX_SECONDS:.0f}s")
                 else:
                     _wp_idx += 1
                     if _wp_idx >= len(_waypoints):
@@ -1034,16 +1060,17 @@ try:
                         print("[live_sim] waypoint traversal complete")
 
         elif _drone_state == "SCANNING":
-            # Warmup phase: render extra high-quality frames at scan pose before decoding
+            # Warmup phase: render a couple frames at the scan pose before decoding.
             if _scan_warmup_left > 0:
                 _scan_warmup_left -= 1
             else:
-                # Hold at scan pose, decrement counter
-                _scan_frames_left -= 1
-                if _scan_frames_left <= 0:
+                # Time-based dwell: keep rendering + decoding at the scan pose until we
+                # decode (the emit path sets _scan_emitted) OR the wall-clock budget
+                # elapses. fps-independent, so the async label texture has time to load.
+                if _scan_emitted or (time.time() - _scan_start_time) >= _SCAN_MAX_SECONDS:
                     _drone_state = "RETURNING"
                     _wp_idx += 1  # move past scan wp to the return path
-                    print(f"[live_sim] scan complete, returning home")
+                    print(f"[live_sim] scan {'decoded' if _scan_emitted else 'timed out'}, returning home")
 
         elif _drone_state == "RETURNING" and _waypoints and _wp_idx < len(_waypoints):
             wp = _waypoints[_wp_idx]
@@ -1224,26 +1251,11 @@ try:
             except Exception:
                 pass
 
-        # ---- If SCANNING (post-warmup) and no decode yet, retry with even higher quality ----
-        if _drone_state == "SCANNING" and _scan_warmup_left == 0 and _drone_target and not dets and _PYZBAR_OK:
-            # Hold a few extra high-quality frames to get a good decode
-            for _retry_sf in (64, 96):
-                rep.orchestrator.step(rt_subframes=_retry_sf, wait_for_render=True)
-                _retry_data = _annot.get_data()
-                if _retry_data is not None:
-                    _retry_arr = np.asarray(_retry_data)
-                    if _retry_arr.ndim == 3 and _retry_arr.shape[2] >= 3:
-                        _retry_rgb = np.ascontiguousarray(_retry_arr[:, :, :3], dtype=np.uint8)
-                        try:
-                            from PIL import Image as _PIL_Image
-                            _retry_dets = pyzbar_decode(_PIL_Image.fromarray(_retry_rgb))
-                            if _retry_dets:
-                                dets = _retry_dets
-                                rgb = _retry_rgb
-                                print(f"[live_sim] QR decoded on retry sf={_retry_sf} at {_drone_target}")
-                                break
-                        except Exception:
-                            pass
+        # Note: the per-frame sf=64/96 "retry" renders were removed — each blocks the
+        # render loop ~1-2 s (starving the async WebSocket server → dropped clients)
+        # and is unnecessary now: the time-based scan dwell attempts a decode every
+        # frame at sf=12 over ~8 s, which is plenty once the emissive label texture
+        # has streamed in (the label is a flat texture, so it decodes at low subframes).
 
         # ---- If SCANNING (post-warmup), try to decode QR and emit inspection result ----
         if _drone_state == "SCANNING" and _scan_warmup_left == 0 and _drone_target and dets and not _scan_emitted:

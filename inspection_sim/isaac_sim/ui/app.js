@@ -800,19 +800,48 @@ function buildScene3D(s) {
     threeScene.add(sprite);
   });
 
-  // ---- Drone marker ----
-  const dGeo = new THREE.ConeGeometry(0.12, 0.30, 6);
-  dGeo.rotateX(Math.PI/2); // point along +Y (forward)
-  const dMat = new THREE.MeshLambertMaterial({ color: 0x22c55e });
-  droneMesh = new THREE.Mesh(dGeo, dMat);
+  // ---- Second-rack boxes (the mirror rack across the aisle — visual only,
+  //      not inspected, so static cardboard at the same columns/levels) ----
+  if (s.second_rack && (s.bins || []).length) {
+    const ry = s.second_rack.center ? s.second_rack.center[1]
+             : (s.second_rack.y_min + s.second_rack.y_max) / 2;
+    const cardboard = new THREE.MeshLambertMaterial({ color: 0x8a6a43 });
+    s.bins.forEach(b => {
+      const [bx, , bz] = b.world_pos;
+      const [bw, bd, bh] = b.box_size || [0.7, 0.5, 0.5];
+      const box = new THREE.Mesh(new THREE.BoxGeometry(bw, bd, bh), cardboard);
+      box.position.set(bx, ry, bz);
+      threeScene.add(box);
+    });
+  }
+
+  // ---- Drone marker: a small quadrotor (body + X-frame + 4 rotor discs) ----
+  droneMesh = new THREE.Group();
+  const _bodyMat  = new THREE.MeshLambertMaterial({ color: 0x2b303b });
+  const _armMat   = new THREE.MeshLambertMaterial({ color: 0x566072 });
+  const _rotorMat = new THREE.MeshLambertMaterial({ color: 0x22c55e });
+  const _REACH = 0.20;
+  // crossed arms (X-frame) reaching the 4 rotors
+  for (const _sgn of [1, -1]) {
+    const bar = new THREE.Mesh(new THREE.BoxGeometry(2 * _REACH * Math.SQRT2, 0.03, 0.02), _armMat);
+    bar.rotation.z = _sgn * Math.PI / 4;
+    droneMesh.add(bar);
+  }
+  // central body + a forward camera/gimbal nub (points +Y = forward)
+  droneMesh.add(new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.18, 0.06), _bodyMat));
+  const _nub = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.08, 0.05),
+                              new THREE.MeshLambertMaterial({ color: 0x9aa7b8 }));
+  _nub.position.set(0, 0.11, -0.015);
+  droneMesh.add(_nub);
+  // 4 rotor discs at the arm tips (scene is Z-up, so the discs lie in the XY plane)
+  for (const [_sx, _sy] of [[1, 1], [1, -1], [-1, 1], [-1, -1]]) {
+    const rotor = new THREE.Mesh(new THREE.CylinderGeometry(0.085, 0.085, 0.012, 18), _rotorMat);
+    rotor.rotation.x = Math.PI / 2;
+    rotor.position.set(_sx * _REACH, _sy * _REACH, 0.04);
+    droneMesh.add(rotor);
+  }
   droneMesh.position.set(-2, -2, 1); // home
   threeScene.add(droneMesh);
-
-  // body sphere
-  const bodGeo = new THREE.SphereGeometry(0.08, 8, 6);
-  const bodMat = new THREE.MeshLambertMaterial({ color: 0xffffff });
-  const bodMesh = new THREE.Mesh(bodGeo, bodMat);
-  droneMesh.add(bodMesh);
 
   // Trail
   trailGeo = new THREE.BufferGeometry();
