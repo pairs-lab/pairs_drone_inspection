@@ -1,3 +1,7 @@
+# Confidential client material (SOR, proposal, partner photos, report decks) —
+# must NOT be pushed to the public repo.
+docs/
+
 # Local agent/editor settings (not part of the published project)
 .claude/
 inspection_sim/isaac_sim/CLAUDE.md
