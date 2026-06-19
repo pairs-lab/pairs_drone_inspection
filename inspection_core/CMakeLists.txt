@@ -9,3 +9,8 @@ catkin_package()
 install(DIRECTORY config
   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
 )
+
+# Survey tool: records BIN poses during the mapping pass -> warehouse_bins.yaml
+catkin_install_python(PROGRAMS scripts/bin_map_recorder.py
+  DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+)

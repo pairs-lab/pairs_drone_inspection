@@ -15,6 +15,15 @@
 
   <!-- Mission node (added in the next step) calls the PAIRS ControlManager services. -->
   <exec_depend>rospy</exec_depend>
+  <!-- bin_map_recorder (survey tool that emits warehouse_bins.yaml) -->
+  <exec_depend>std_msgs</exec_depend>
+  <exec_depend>geometry_msgs</exec_depend>
+  <exec_depend>tf2_ros</exec_depend>
+  <exec_depend>tf2_geometry_msgs</exec_depend>
+  <!-- optional features (anchors / QR auto-record); node degrades gracefully if absent -->
+  <exec_depend>sensor_msgs</exec_depend>
+  <exec_depend>cv_bridge</exec_depend>
+  <exec_depend>apriltag_ros</exec_depend>
 
   <export>
   </export>
