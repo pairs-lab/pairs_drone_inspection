@@ -3,11 +3,17 @@ import random
 from PIL import Image, ImageDraw
 from src import config
 
+
+CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))  
+PROJECT_ROOT = os.path.dirname(CURRENT_DIR)           
+MODELS_DIR = os.path.join(PROJECT_ROOT, "models")         
 def generate_qr_labels():
-    os.makedirs("models", exist_ok=True)
+   
+    os.makedirs(MODELS_DIR, exist_ok=True)
     
     for bid, data in config.bin_data.items():
-        tex_path = f"models/qr_{bid}.png"
+       
+        tex_path = os.path.join(MODELS_DIR, f"qr_{bid}.png")
         img = Image.new('RGB', (256, 256), color=(245, 245, 245))
         draw = ImageDraw.Draw(img)
         
@@ -34,7 +40,7 @@ def generate_qr_labels():
 def generate_warehouse_xml():
     generate_qr_labels() 
     
-    xml = """<mujoco model="pro_warehouse_demo">
+    xml = """<mujoco model="warehouse_inspection_demo">
     <option timestep="0.01" gravity="0 0 -9.81"/>
     <visual>
         <headlight ambient="0.4 0.4 0.4" diffuse="0.6 0.6 0.6" specular="0.1 0.1 0.1"/>
@@ -43,7 +49,6 @@ def generate_warehouse_xml():
     </visual>
     <asset>
         <mesh name="warehouse_mesh" file="warehouse.obj"/>
-        <mesh name="frame_mesh"     file="SM_RackFrame_03.obj"/>
         <mesh name="box_mesh"       file="SM_CardBoxB_01_1051.obj"/>
 
         <material name="mat_rack"  rgba="0.5 0.5 0.5 1" shininess="0.3"/>
@@ -74,16 +79,21 @@ def generate_warehouse_xml():
         <geom type="box" size="0.1 6.5 1.0" pos="11.2 -1.5 6.0" rgba="0.92 0.62 0.08 1"/>
 
         <body name="warehouse_env" pos="0 0 0"></body>
-        <body name="obstacle" pos="1.2 -0.9 0.3">
-            <geom type="box" size="0.35 0.35 0.3" rgba="0.55 0.35 0.20 1"/>
-        </body>
 """
     columns = {'A': 0.0, 'B': 1.2, 'C': 2.4}
     levels  = [1, 2, 3, 4, 5, 6]
-    Z_OFFSET = 0.05
+    Z_OFFSET = 0.1 
 
-    xml += '\n        <body pos="1.2 0 0"><geom type="mesh" mesh="frame_mesh" material="mat_rack"/></body>'
-    
+    COL_Z = 2.05                       
+    COL_SIZE = "0.04 0.04 2.05"        
+    COL_COLOR = "0.5 0.5 0.5 1"     
+
+    xml += f"""
+        <body pos="-0.4 -0.45 {COL_Z}"><geom type="box" size="{COL_SIZE}" rgba="{COL_COLOR}"/></body>
+        <body pos="2.8 -0.45 {COL_Z}"><geom type="box" size="{COL_SIZE}" rgba="{COL_COLOR}"/></body>
+        <body pos="-0.4 0.45 {COL_Z}"><geom type="box" size="{COL_SIZE}" rgba="{COL_COLOR}"/></body>
+        <body pos="2.8 0.45 {COL_Z}"><geom type="box" size="{COL_SIZE}" rgba="{COL_COLOR}"/></body>
+    """
     for lvl in levels:
         z_shelf = (lvl - 1) * 0.8 + Z_OFFSET
         xml += f'\n        <body pos="1.2 0 {z_shelf - 0.02}"><geom type="box" size="1.6 0.45 0.02" material="mat_shelf"/></body>'
@@ -99,8 +109,13 @@ def generate_warehouse_xml():
             <geom type="plane" size="0.1 0.1 0.01" pos="0 -0.28 0.25" euler="90 0 0" material="mat_{bid}"/>
         </body>"""
 
-    xml += '\n\n        <body pos="1.2 -1.8 0"><geom type="mesh" mesh="frame_mesh" material="mat_rack" euler="0 0 180"/></body>'
-    
+    xml += f"""
+        <body pos="-0.4 -2.25 {COL_Z}"><geom type="box" size="{COL_SIZE}" rgba="{COL_COLOR}"/></body>
+        <body pos="2.8 -2.25 {COL_Z}"><geom type="box" size="{COL_SIZE}" rgba="{COL_COLOR}"/></body>
+        <body pos="-0.4 -1.35 {COL_Z}"><geom type="box" size="{COL_SIZE}" rgba="{COL_COLOR}"/></body>
+        <body pos="2.8 -1.35 {COL_Z}"><geom type="box" size="{COL_SIZE}" rgba="{COL_COLOR}"/></body>
+    """
+
     for lvl in levels:
         z_shelf = (lvl - 1) * 0.8 + Z_OFFSET
         xml += f'\n        <body pos="1.2 -1.8 {z_shelf - 0.02}"><geom type="box" size="1.6 0.45 0.02" material="mat_shelf"/></body>'
@@ -136,5 +151,6 @@ def generate_warehouse_xml():
     </worldbody>
 </mujoco>"""
 
-    with open("models/scene.xml", "w", encoding="utf-8") as f:
+    xml_path = os.path.join(MODELS_DIR, "scene.xml")
+    with open(xml_path, "w", encoding="utf-8") as f:
         f.write(xml)

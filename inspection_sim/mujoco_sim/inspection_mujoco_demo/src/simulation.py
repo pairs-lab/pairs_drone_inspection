@@ -1,3 +1,4 @@
+import os
 import time
 import numpy as np
 import mujoco
@@ -8,7 +9,7 @@ def get_bin_coords(bin_id):
     if bin_id == "HOME": return config.HOME_POS
     col_map = {'A': 0.0, 'B': 1.2, 'C': 2.4}
     x = col_map[bin_id[0]]
-    z = (int(bin_id[1]) - 1) * 0.8 + 0.25 
+    z = (int(bin_id[1]) - 1) * 0.8 + 0.25 + 0.1 
     return np.array([x, -0.8, z])
 
 def fly_to_target(model, data, mocap_id, target_pos, viewer, renderer, ui_camera_callback):
@@ -41,7 +42,11 @@ def change_bin_color(model, bin_id, color_rgba):
             model.geom_rgba[geom_idx] = color_rgba
 
 def mujoco_thread(ui_update_cb, ui_result_cb, ui_camera_cb):
-    model = mujoco.MjModel.from_xml_path('/home/admin1/pairs_drone_inspection/inspection_sim/mujoco_sim/inspection_mujoco_demo/models/scene.xml')
+    current_dir = os.path.dirname(os.path.abspath(__file__)) 
+    project_root = os.path.dirname(current_dir)              
+    xml_path = os.path.join(project_root, "models", "scene.xml")
+    model = mujoco.MjModel.from_xml_path(xml_path)
+    
     data  = mujoco.MjData(model)
     mocap_id = model.body('drone_body').mocapid[0]
     renderer = mujoco.Renderer(model, height=360, width=480) 
