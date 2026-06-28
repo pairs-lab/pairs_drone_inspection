@@ -6,14 +6,30 @@ the inspection stack.
 
 ## What's in the world (`worlds/warehouse.world`)
 
-- **Two pallet-racking units** forming a **1.6 m aisle** along `+x` (6 levels, 3 bays,
-  ~7 m tall) — blue uprights / orange beams / grey pallets, matching the partner site.
-- **AprilTag anchors** (`apriltag_marker`) on the aisle-facing beams — 3 per side — for
-  global-localization corrections and to defeat perceptual aliasing.
+- **Six pallet-racking units** forming **3 aisles** (6 levels, 3 bays, ~7 m tall) — blue uprights / orange beams / grey pallets. Each level contains pallets filling all 18 bins per rack.
+- **Unique Anchor AprilTags** (`apriltag_marker`) placed at the start of each rack (IDs 101 to 106) for robust rack identification and relative navigation.
+- **Bin AprilTags** (ID 94) centered inside each bin space to facilitate high-precision visual servoing.
 - **A fiducial charging dock** at the aisle entrance (`x = -6`) for precision-landing tests.
 
 Geometry is parameterized in `models/warehouse_rack/generate_rack.py` (re-run to match a
 site survey: bays, levels, pitch, aisle depth).
+
+## Navigation Features (`scripts/relative_navigator.py`)
+
+This package includes a fully functional, autonomous GUI ground control station that demonstrates a highly robust **Hybrid Navigation System**:
+
+1. **Phase 1: Global Approach (Tìm Kệ)**
+   - The drone uses global coordinates to fly down a safe center-corridor (`X = -5.5`) to the entrance of the selected rack.
+   - It searches for and locks onto the specific Anchor Tag (e.g. ID 103 for Rack 3).
+
+2. **Phase 2: Manhattan Zigzag Navigation (Bay Zigzag)**
+   - Using the Anchor Tag as a relative datum, the drone computes the exact positions of all 18 bins.
+   - It employs a true **Lawnmower (Zigzag) Path Planning algorithm** to move safely along the Manhattan Grid (X and Z axes) without colliding into racks.
+   - Supports both flying to a specific bin dynamically, or performing a full autonomous 18-bin scan sequence.
+
+3. **Phase 3: Visual Servoing (Căn giữa tự động)**
+   - Upon arriving at the calculated bin coordinates, the drone locks onto the nearest Bin Tag (ID 94).
+   - It applies a Proportional (P) Controller using the camera's X and Y pixel errors to dynamically shift the drone's position until the bin tag is perfectly centered in the frame.
 
 ## The downward ToF
 
@@ -32,9 +48,11 @@ mirroring the PAIRS `one_drone_3dlidar` session:
 roscd inspection_gazebo/tmux/warehouse && ./start.sh     # ./kill.sh to stop
 ```
 
-The `goto` window has a preloaded command to fly down the aisle (`[3.0, 0.0, 1.5, 0.0]`).
-The core flies on sim-GPS for now (`config/custom_config.yaml`); switching to Point-LIO /
-LIO-SAM is Step 2.
+Once the simulation starts and the drone is hovering, launch the autonomous GCS:
+
+```bash
+rosrun inspection_gazebo relative_navigator.py
+```
 
 **Gazebo only (no autonomy core)** — quick world/sensor check:
 
@@ -42,27 +60,20 @@ LIO-SAM is Step 2.
 roslaunch inspection_gazebo full_sim.launch                        # gazebo + world + drone
 # or the manual two-step:
 roslaunch inspection_gazebo simulation.launch                      # gazebo + world
-rosrun   inspection_gazebo spawn_inspection_uav.sh 1 x500           # spawn drone (+ToF/Livox/cam)
+rosrun inspection_gazebo spawn_inspection_uav.sh 1 x500            # spawn drone (+ToF/Livox/cam)
 ```
 
 Sensor flags are configurable via the `sensors:=` launch arg (passed through to the PAIRS
 drone spawner).
 
-## Layout (mirrors kr_autonomous_flight/autonomy_sim/gazebo_sim)
+## Layout
 
 ```
 inspection_gazebo/
 ├── launch/   full_sim.launch (top), simulation.launch (world only)
 ├── worlds/   warehouse.world
-├── models/   warehouse_rack (generated), apriltag_marker (reused texture)
-├── scripts/  spawn_inspection_uav.sh
-└── config/
+├── models/   warehouse_rack (generated), apriltag_marker (textures)
+├── scripts/  spawn_inspection_uav.sh, relative_navigator.py
+├── config/   tags.yaml
+└── tmux/     warehouse session definitions
 ```
-
-## Follow-ups (not in this first pass)
-
-- **Unique tag IDs:** every `apriltag_marker` currently shares one tag36h11 texture
-  (id 0). Generate per-anchor textures (tag36h11) so anchors are distinguishable.
-- **Semantic BIN map:** the rack here is geometry only; the (col,level)→standoff-pose
-  layer is a later inspection_core deliverable.
-- **Wire AprilTag → EstimationManager** correction once tags are unique.

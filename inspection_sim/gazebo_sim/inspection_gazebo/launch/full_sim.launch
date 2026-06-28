@@ -20,7 +20,9 @@
   <!-- sensor flags passed to the PAIRS drone spawner (space-separated).
        enable-rangefinder = downward Garmin ToF -> sensor_msgs/Range on hw_api/distance_sensor (AGL).
        enable-livox       = Livox Mid-360 (primary LiDAR-inertial SLAM sensor).
-       enable-realsense-front = forward RGB-D (VIO backup / label-capture stand-in). -->
+       enable-realsense-front = forward RGB-D (VIO backup / label-capture stand-in).
+       enable-bluefox-camera  = downward mono camera -> the fiducial stream the
+                                precise-landing pipeline reads off the charging dock. -->
   <arg name="sensors"  default="--enable-rangefinder --enable-livox --enable-realsense-front" />
   <arg name="world_file" default="$(find inspection_gazebo)/worlds/warehouse.world" />
 
@@ -36,4 +38,12 @@
   <node name="spawn_inspection_uav" pkg="inspection_gazebo" type="spawn_inspection_uav.sh"
         output="screen" args="$(arg uav_id) $(arg uav_type) $(arg sensors)" />
 
+  <node name="relative_navigator_gcs" pkg="inspection_gazebo" type="relative_navigator.py" output="screen">
+    <param name="uav_name" value="uav$(arg uav_id)" />
+  </node>
+  
+  <include file="$(find inspection_gazebo)/launch/apriltag.launch">
+    <arg name="uav_name" value="uav$(arg uav_id)" />
+  </include>
+  
 </launch>

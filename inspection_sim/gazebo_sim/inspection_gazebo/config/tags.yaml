@@ -1,0 +1,12 @@
+standalone_tags:
+  [
+    {id: 0, size: 0.40, name: "bin_anchor_0"},
+    {id: 1, size: 0.40, name: "bin_anchor_1"},
+    {id: 2, size: 0.40, name: "bin_anchor_2"},
+    {id: 101, size: 0.40, name: "anchor_tag_101"},
+    {id: 102, size: 0.40, name: "anchor_tag_102"},
+    {id: 103, size: 0.40, name: "anchor_tag_103"},
+    {id: 104, size: 0.40, name: "anchor_tag_104"},
+    {id: 105, size: 0.40, name: "anchor_tag_105"},
+    {id: 106, size: 0.40, name: "anchor_tag_106"}
+  ]

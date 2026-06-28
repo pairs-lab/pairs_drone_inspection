@@ -1,0 +1,101 @@
+material Apriltag_101
+{
+  technique
+  {
+    pass
+    {
+      lighting off
+      texture_unit
+      {
+        texture atag_101.png
+        filtering none none none
+        scale 1.0 1.0
+      }
+    }
+  }
+}
+
+material Apriltag_102
+{
+  technique
+  {
+    pass
+    {
+      lighting off
+      texture_unit
+      {
+        texture atag_102.png
+        filtering none none none
+        scale 1.0 1.0
+      }
+    }
+  }
+}
+
+material Apriltag_103
+{
+  technique
+  {
+    pass
+    {
+      lighting off
+      texture_unit
+      {
+        texture atag_103.png
+        filtering none none none
+        scale 1.0 1.0
+      }
+    }
+  }
+}
+
+material Apriltag_104
+{
+  technique
+  {
+    pass
+    {
+      lighting off
+      texture_unit
+      {
+        texture atag_104.png
+        filtering none none none
+        scale 1.0 1.0
+      }
+    }
+  }
+}
+
+material Apriltag_105
+{
+  technique
+  {
+    pass
+    {
+      lighting off
+      texture_unit
+      {
+        texture atag_105.png
+        filtering none none none
+        scale 1.0 1.0
+      }
+    }
+  }
+}
+
+material Apriltag_106
+{
+  technique
+  {
+    pass
+    {
+      lighting off
+      texture_unit
+      {
+        texture atag_106.png
+        filtering none none none
+        scale 1.0 1.0
+      }
+    }
+  }
+}

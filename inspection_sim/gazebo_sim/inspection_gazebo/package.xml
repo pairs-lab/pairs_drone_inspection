@@ -13,6 +13,13 @@
 
   <buildtool_depend>catkin</buildtool_depend>
 
+  <!-- Dependencies for Relative Navigation Node -->
+  <depend>rospy</depend>
+  <depend>std_msgs</depend>
+  <depend>geometry_msgs</depend>
+  <depend>apriltag_ros</depend>
+  <depend>mrs_msgs</depend>
+
   <exec_depend>gazebo_ros</exec_depend>
   <exec_depend>rosservice</exec_depend>
   <exec_depend>pairs_gazebo_common_resources</exec_depend>

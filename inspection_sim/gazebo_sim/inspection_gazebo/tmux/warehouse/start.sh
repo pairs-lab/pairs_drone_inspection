@@ -33,8 +33,9 @@ read W_gazebo P <<< "$(tmux new-window -t "$SESSION_NAME" -n "gazebo" -P -F '#{w
 tmux send-keys -t "$P" "$SETUP; "'waitForRos; roslaunch inspection_gazebo simulation.launch gui:=true' Enter
 P=$(tmux split-window -t "$W_gazebo" -P -F '#{pane_id}')
 tmux select-layout -t "$W_gazebo" tiled
-# downward ToF (--enable-rangefinder) + Livox Mid-360 (--enable-livox) + forward RealSense
-tmux send-keys -t "$P" "$SETUP; "'waitForGazebo; waitForSpawn; rosservice call /pairs_drone_spawner/spawn "1 --$UAV_TYPE --enable-rangefinder --enable-livox --enable-realsense-front"' Enter
+
+#sleep 5 to let Gazebo load the floor and racks!
+tmux send-keys -t "$P" "$SETUP; "'waitForGazebo; sleep 5; waitForSpawn; rosservice call /pairs_drone_spawner/spawn "1 --$UAV_TYPE --pos -6.0 0.0 0.1 0.0 --enable-rangefinder --enable-livox --enable-realsense-front"' Enter
 P=$(tmux split-window -t "$W_gazebo" -P -F '#{pane_id}')
 tmux select-layout -t "$W_gazebo" tiled
 tmux send-keys -t "$P" "$SETUP; "'waitForControl; gz camera -c gzclient_camera -f $UAV_NAME; history -s gz camera -c gzclient_camera -f $UAV_NAME' Enter
