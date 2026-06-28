@@ -20,6 +20,34 @@ The PAIRS stack supplies the rest: `EstimationManager` (LiDAR-inertial + fiducia
 corrections), `ControlManager` (MPC tracker + SE(3)/MPC controllers + bumper + failsafe),
 the OctoMap planner, and the HW API to PX4.
 
+## Localization (GPS-denied) — opt-in Point-LIO
+
+`config/localization/` + `launch/localization.launch` add **LiDAR-inertial localization** for the
+warehouse (no GPS), using the PAIRS **Point-LIO** estimator on the Livox Mid-360 (odometry-only —
+no persisted map). The Garmin **down-ToF** still provides AGL for landing.
+
+It is **opt-in** — the warehouse sim still defaults to sim-GPS, because Point-LIO needs a **GPU sim
+flight to validate** (frames/offsets/tuning) that can't be done headlessly. To switch:
+
+```bash
+# 1) run the core with the localization config (instead of the GPS one):
+roslaunch pairs_uav_core core.launch ... \
+    custom_config:=$(rospack find inspection_core)/config/localization/custom_config.yaml ...
+# 2) bring up Point-LIO + the topic/frame reconciliation:
+roslaunch inspection_core localization.launch
+```
+
+`localization.launch` relays the stock `--enable-livox` topics
+(`mid360_cloud_nodelet/{points,imu}` → `livox/{points,imu}`) and publishes the `fcu→livox` static
+TF that Point-LIO expects. The Point-LIO packages ship in the Docker image; for a bare apt install
+also `apt install ros-noetic-point-lio ros-noetic-pairs-point-lio-core
+ros-noetic-pairs-point-lio-estimator-plugin`.
+
+> **Follow-ups (scaffolded, not wired):** D455 **OpenVINS** as a VIO *backup* estimator — the plugin
+> is already in the base image, but the sim camera (a D435) has **no IMU**, so VIO needs `hw_api/imu`
+> + sim calibration. A true **AprilTag drift-anchor** estimator correction needs the estimator's
+> covariance-pose type (currently a TODO stub); today tags only drive the *landing* controller.
+
 ## Operator GUI — the rqt panel
 
 `src/inspection_core/inspection_panel.py` is the **rqt control panel** (plugin

@@ -1,0 +1,42 @@
+<?xml version="1.0"?>
+<!--
+  GPS-denied localization for the inspection drone: PAIRS Point-LIO (Livox Mid-360,
+  LiDAR-inertial ODOMETRY, localization-only / no persisted map). It produces
+  point_lio/odom, which the EstimationManager's `point_lio` plugin fuses (see
+  config/localization/custom_config.yaml).
+
+  This brings up the Point-LIO core node PLUS the topic/frame reconciliation the
+  stock `'enable-livox'` spawn needs: that spawn publishes
+  /<uav>/mid360_cloud_nodelet/{points,imu} (frames mid360_lidar / mid360_imu),
+  but Point-LIO subscribes to /<uav>/livox/{points,imu} (frame <uav>/livox).
+
+  HOW TO USE (opt-in; the warehouse sim still defaults to sim-GPS):
+    1. run the core with the localization config instead of the GPS one:
+         roslaunch pairs_uav_core core.launch ... \
+           custom_config:=$(rospack find inspection_core)/config/localization/custom_config.yaml ...
+    2. roslaunch inspection_core localization.launch     (this file)
+
+  ⚠ NEEDS A GPU SIM FLIGHT TO VALIDATE — the fcu->livox offset below and the
+  per-airframe Mid-360 mount must be confirmed/tuned; headless load is not enough.
+-->
+<launch>
+  <arg name="UAV_NAME" default="$(optenv UAV_NAME uav1)" />
+
+  <!-- reconcile the stock Livox topics -> the names Point-LIO subscribes to -->
+  <node name="livox_points_relay" pkg="topic_tools" type="relay" output="screen"
+        args="/$(arg UAV_NAME)/mid360_cloud_nodelet/points /$(arg UAV_NAME)/livox/points" />
+  <node name="livox_imu_relay" pkg="topic_tools" type="relay" output="screen"
+        args="/$(arg UAV_NAME)/mid360_cloud_nodelet/imu /$(arg UAV_NAME)/livox/imu" />
+
+  <!-- fcu -> livox sensor frame. 0.2 m is the reference value; confirm against the
+       x500 Mid-360 mount during validation. -->
+  <node name="fcu_to_livox_tf" pkg="tf2_ros" type="static_transform_publisher"
+        args="0 0 0.2 0 0 0 $(arg UAV_NAME)/fcu $(arg UAV_NAME)/livox" />
+
+  <!-- Point-LIO core (publishes point_lio/odom, fused by the EstimationManager point_lio plugin) -->
+  <include file="$(find pairs_point_lio_core)/launch/point_lio_gazebo_mid360.launch">
+    <arg name="UAV_NAME"      value="$(arg UAV_NAME)" />
+    <arg name="custom_config" value="$(find inspection_core)/config/localization/point_lio_mid360.yaml" />
+    <arg name="rviz"          value="false" />
+  </include>
+</launch>
