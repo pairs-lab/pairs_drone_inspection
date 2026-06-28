@@ -33,9 +33,9 @@ read W_gazebo P <<< "$(tmux new-window -t "$SESSION_NAME" -n "gazebo" -P -F '#{w
 tmux send-keys -t "$P" "$SETUP; "'waitForRos; roslaunch inspection_gazebo simulation.launch gui:=true' Enter
 P=$(tmux split-window -t "$W_gazebo" -P -F '#{pane_id}')
 tmux select-layout -t "$W_gazebo" tiled
-
-#sleep 5 to let Gazebo load the floor and racks!
-tmux send-keys -t "$P" "$SETUP; "'waitForGazebo; sleep 5; waitForSpawn; rosservice call /pairs_drone_spawner/spawn "1 --$UAV_TYPE --pos -6.0 0.0 0.1 0.0 --enable-rangefinder --enable-livox --enable-realsense-front"' Enter
+# downward ToF (--enable-rangefinder) + Livox Mid-360 (--enable-livox) + forward RealSense
+# + downward bluefox camera (--enable-bluefox-camera) = the fiducial stream precise landing reads
+tmux send-keys -t "$P" "$SETUP; "'waitForGazebo; sleep 5; waitForSpawn; rosservice call /pairs_drone_spawner/spawn "1 --$UAV_TYPE --pos -6.0 0.0 0.1 0.0 --enable-rangefinder --enable-livox --enable-realsense-front --enable-bluefox-camera"' Enter
 P=$(tmux split-window -t "$W_gazebo" -P -F '#{pane_id}')
 tmux select-layout -t "$W_gazebo" tiled
 tmux send-keys -t "$P" "$SETUP; "'waitForControl; gz camera -c gzclient_camera -f $UAV_NAME; history -s gz camera -c gzclient_camera -f $UAV_NAME' Enter
@@ -56,6 +56,13 @@ read W_core P <<< "$(tmux new-window -t "$SESSION_NAME" -n "core" -P -F '#{windo
 tmux send-keys -t "$P" "$SETUP; "'waitForHw; roslaunch pairs_uav_core core.launch platform_config:=`rospack find pairs_uav_gazebo_simulation`/config/pairs_uav_system/$UAV_TYPE.yaml custom_config:=./config/custom_config.yaml world_config:=./config/world_config.yaml network_config:=./config/network_config.yaml' Enter
 tmux select-layout -t "$W_core" tiled
 
+# ---------------- window: precland (apriltag detector + landing-pad LKF + descent controller) ----------------
+# ONE launch transitively starts the detector -> landing_pad_estimation -> precise_landing chain.
+# camera_node/image_topic point at the downward bluefox cam added to the spawn above.
+read W_precland P <<< "$(tmux new-window -t "$SESSION_NAME" -n "precland" -P -F '#{window_id} #{pane_id}')"
+tmux send-keys -t "$P" "$SETUP; "'waitForControl; roslaunch pairs_precise_landing precise_landing.launch apriltag_config:=./config/apriltag.yaml camera_node:=bluefox_optflow image_topic:=image_raw estimator_config:=./config/landing_estimator.yaml controller_config:=./config/landing_controller.yaml' Enter
+tmux select-layout -t "$W_precland" tiled
+
 # ---------------- window: takeoff ----------------
 read W_takeoff P <<< "$(tmux new-window -t "$SESSION_NAME" -n "takeoff" -P -F '#{window_id} #{pane_id}')"
 tmux send-keys -t "$P" "$SETUP; "'waitForHw; roslaunch pairs_uav_autostart automatic_start.launch' Enter
@@ -68,6 +75,14 @@ tmux select-layout -t "$W_takeoff" tiled
 read W_goto P <<< "$(tmux new-window -t "$SESSION_NAME" -n "goto" -P -F '#{window_id} #{pane_id}')"
 tmux send-keys -t "$P" "$SETUP; "'history -s rosservice call /$UAV_NAME/control_manager/goto \"goal: \[3.0, 0.0, 1.5, 0.0\]\"' Enter
 tmux select-layout -t "$W_goto" tiled
+
+# ---------------- window: dock (precision-land on the charging dock at world -6,0) ----------------
+# Pre-staged in shell history (newest first): up-arrow 1 = fly over the dock, 2 = trigger
+# precise landing, 3 = abort (climbs back off the pad). The land service is only accepted
+# while flying_normally with the pad in view, so take off + reach the dock first.
+read W_dock P <<< "$(tmux new-window -t "$SESSION_NAME" -n "dock" -P -F '#{window_id} #{pane_id}')"
+tmux send-keys -t "$P" "$SETUP; "'history -s rosservice call /$UAV_NAME/precise_landing/abort; history -s rosservice call /$UAV_NAME/precise_landing/land; history -s rosservice call /$UAV_NAME/control_manager/goto \"goal: \[-6.0, 0.0, 2.0, 0.0\]\"' Enter
+tmux select-layout -t "$W_dock" tiled
 
 # ---------------- window: rviz ----------------
 read W_rviz P <<< "$(tmux new-window -t "$SESSION_NAME" -n "rviz" -P -F '#{window_id} #{pane_id}')"

@@ -135,8 +135,13 @@
         </visual>
       </link>
     </model>
-    
-    <include><name>tag_dock</name><uri>model://apriltag_marker</uri><pose>-6 0 0.055 0 0 0</pose></include>
+    <!-- Precise-landing fiducial: the recursive (tagCustom48h12) pad from
+         pairs_precise_landing_gazebo. Sized to match pairs_landing_pad_estimation's
+         config (big tag id 0 @ 0.30 m for the far approach, small tag id 10 @ 0.06 m
+         nested in its centre for the final centimetres). Flat, face +Z up so the
+         descending drone's downward camera reads it. NOTE: distinct family/geometry
+         from the rack 'apriltag_marker' anchors, so the dock is unambiguous. -->
+    <include><name>tag_dock</name><uri>model://Apriltag_recursive1</uri><pose>-6 0 0.055 0 0 0</pose></include>
 
     <model name='the_void'>
       <static>1</static>

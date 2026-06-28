@@ -24,6 +24,11 @@
   <exec_depend>rosservice</exec_depend>
   <exec_depend>pairs_gazebo_common_resources</exec_depend>
   <exec_depend>pairs_uav_gazebo_simulation</exec_depend>
+  <!-- precise landing on the charging dock: the detector + landing-pad LKF +
+       descent controller, and the recursive-AprilTag pad model (model://Apriltag_recursive1). -->
+  <exec_depend>pairs_precise_landing</exec_depend>
+  <exec_depend>pairs_landing_pad_estimation</exec_depend>
+  <exec_depend>pairs_precise_landing_gazebo</exec_depend>
 
   <export>
     <gazebo_ros gazebo_model_path="${prefix}/models" />

@@ -20,8 +20,12 @@ catkin_install_python(PROGRAMS
 # ==========================================
 
 # Install simulation assets (also makes them available in the .deb).
-install(DIRECTORY launch worlds models config
+# USE_SOURCE_PERMISSIONS keeps the +x bit on tmux/warehouse/{start,kill}.sh; without it
+# install(DIRECTORY) drops to 0644 and `./start.sh` fails. tmux/ ships the launcher AND
+# its co-located config/ (start.sh loads ./config/*.yaml relative to its own dir).
+install(DIRECTORY launch worlds models config tmux
   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
+  USE_SOURCE_PERMISSIONS
 )
 
 # Install bash script

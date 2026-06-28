@@ -15,7 +15,7 @@ if [ "$#" -gt 2 ]; then
   shift 2
   SENSORS="$*"
 else
-  SENSORS="--enable-rangefinder --enable-livox --enable-realsense-front"
+  SENSORS="--enable-rangefinder --enable-livox --enable-realsense-front --enable-bluefox-camera"
 fi
 
 # Landing pad coordinates (fixed in warehouse.world)

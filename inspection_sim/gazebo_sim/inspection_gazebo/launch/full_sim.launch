@@ -23,7 +23,7 @@
        enable-realsense-front = forward RGB-D (VIO backup / label-capture stand-in).
        enable-bluefox-camera  = downward mono camera -> the fiducial stream the
                                 precise-landing pipeline reads off the charging dock. -->
-  <arg name="sensors"  default="--enable-rangefinder --enable-livox --enable-realsense-front" />
+  <arg name="sensors"  default="--enable-rangefinder --enable-livox --enable-realsense-front --enable-bluefox-camera" />
   <arg name="world_file" default="$(find inspection_gazebo)/worlds/warehouse.world" />
 
   <!-- 1) Gazebo + warehouse world + spawner node -->
