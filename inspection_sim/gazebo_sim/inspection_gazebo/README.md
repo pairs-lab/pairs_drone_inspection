@@ -48,6 +48,40 @@ rosrun   inspection_gazebo spawn_inspection_uav.sh 1 x500           # spawn dron
 Sensor flags are configurable via the `sensors:=` launch arg (passed through to the PAIRS
 drone spawner).
 
+## Precision landing on the charging dock
+
+The session wires the PAIRS precise-landing stack onto the charging dock at the aisle
+entrance (world `-6, 0`):
+
+- **The pad** — `tag_dock` is the recursive `Apriltag_recursive1` fiducial from
+  `pairs_precise_landing_gazebo` (a `tagCustom48h12` pad: a big id 0 @ 0.30 m for the far
+  approach with a small id 10 @ 0.06 m nested in its centre for the final centimetres),
+  flat on the dock facing **+Z up** so the descending drone reads it.
+- **The eye** — the drone is spawned with `--enable-bluefox-camera`, a downward camera
+  publishing `/uav1/bluefox_optflow/image_raw` (+`camera_info`) — the fiducial stream.
+- **The chain** — the `precland` tmux window runs one launch that transitively starts the
+  AprilTag detector → landing-pad LKF (`landing_pad_estimation`) → descent controller
+  (`precise_landing`):
+  ```bash
+  roslaunch pairs_precise_landing precise_landing.launch \
+      apriltag_config:=./config/apriltag.yaml \
+      camera_node:=bluefox_optflow image_topic:=image_raw \
+      estimator_config:=./config/landing_estimator.yaml \
+      controller_config:=./config/landing_controller.yaml
+  ```
+- **The trigger ("button")** — the `dock` tmux window pre-stages three commands in shell
+  history (press ↑ to recall, newest first):
+  1. `rosservice call /uav1/control_manager/goto "goal: [-6.0, 0.0, 2.0, 0.0]"` — fly over the dock
+  2. `rosservice call /uav1/precise_landing/land`  — start the staged precise descent (`std_srvs/Trigger`)
+  3. `rosservice call /uav1/precise_landing/abort` — climb back off the pad and return to IDLE
+
+  The land service is only accepted while **flying normally with the pad in view** (state
+  machine IDLE → ALIGN → DESCEND → ALIGN2 → LANDING), so take off and reach the dock first.
+
+> Needs the precise-landing packages (shipped in the PAIRS base image) and a **GPU/display**
+> for the downward camera to render — without rendered frames the detector sees no tag. The
+> world-load and dock-pad spawn are verified headless; the full descent is a GPU-sim test.
+
 ## Layout (mirrors kr_autonomous_flight/autonomy_sim/gazebo_sim)
 
 ```

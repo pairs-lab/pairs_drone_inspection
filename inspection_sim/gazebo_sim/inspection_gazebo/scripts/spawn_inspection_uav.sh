@@ -4,8 +4,9 @@
 #   spawn_inspection_uav.sh [UAV_ID] [UAV_TYPE] [SENSOR_FLAGS...]
 #
 # Defaults to the warehouse-inspection sensor suite: downward ToF (Garmin
-# rangefinder), Livox Mid-360, and a forward RealSense. Waits for the spawner
-# service before issuing the request.
+# rangefinder), Livox Mid-360, a forward RealSense, and a downward bluefox camera
+# (the fiducial stream the precise-landing pipeline reads off the charging dock).
+# Waits for the spawner service before issuing the request.
 set -euo pipefail
 
 UAV_ID="${1:-1}"
@@ -14,7 +15,7 @@ if [ "$#" -gt 2 ]; then
   shift 2
   SENSORS="$*"
 else
-  SENSORS="--enable-rangefinder --enable-livox --enable-realsense-front"
+  SENSORS="--enable-rangefinder --enable-livox --enable-realsense-front --enable-bluefox-camera"
 fi
 
 echo "[spawn_inspection_uav] waiting for /pairs_drone_spawner/spawn ..."
