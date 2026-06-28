@@ -5,11 +5,6 @@ Autonomous-drone **warehouse inventory cycle-count** system, built on the
 rack/BIN; the drone autonomously flies a narrow GPS-denied aisle to a precise standoff
 pose, reads the goods label, and the result is reconciled against the inventory system.
 
-The repository is organised like `kr_autonomous_flight` (a clean `core / sim / real`
-split) but the technique is **PAIRS**: ROS Noetic / catkin, the PAIRS manager-plugin
-control & estimation stack, and the PAIRS bloom→`.deb`→signed-apt→Docker packaging
-pipeline.
-
 ## Layout
 
 ```
