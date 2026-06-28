@@ -33,8 +33,10 @@ roslaunch inspection_gazebo full_sim.launch
 ```
 
 The drone spawns with a downward ToF (Garmin rangefinder), a Livox Mid-360, and a forward
-camera; the `goto` window flies it down the aisle centerline. The operator drives
-rack/BIN navigation and dock landing from the **PAIRS Inspection Control** rqt panel
+camera. Obstacle avoidance runs off the Mid-360 — an octomap planner gives collision-free
+`goto` (routes around the racks) backed by a reactive bumper, so the drone flies the aisles
+without hitting the shelves. The operator drives flight, rack/BIN navigation, and dock
+landing from the single **PAIRS Inspection Control** rqt panel
 (`roslaunch inspection_core inspection.launch`, or in any rqt session:
 Plugins → PAIRS → PAIRS Inspection Control). See
 [inspection_sim/gazebo_sim/inspection_gazebo/README.md](inspection_sim/gazebo_sim/inspection_gazebo/README.md).

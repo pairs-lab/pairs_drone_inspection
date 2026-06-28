@@ -1,0 +1,26 @@
+# Octomap planner overrides for the warehouse — narrow (~2.6 m) aisles.
+# Overlays pairs_octomap_planner/config/octomap_planner.yaml.
+#
+# The single most important parameter here is safe_obstacle_distance: the planner
+# inflates every obstacle by it, so the free corridor through a 2.6 m aisle is
+# (2.6 - 2*default). The open-field default (1.0 m) leaves NO free space in an
+# aisle and the planner refuses to move — hence the reduction. ⚠ confirm in the
+# GPU sim that the drone can still traverse the aisle before trusting these.
+
+planning_tree:
+  resolution: 0.30   # match the octomap_server resolution
+
+safe_obstacle_distance:
+  default: 0.50   # [m] (default 1.0) — clearance kept from shelves
+  min: 0.35       # [m] (default 0.6)
+  max: 3.0        # [m] (default 5.0)
+
+distance_transform:
+  submap_distance: 15.0   # [m] (default 20) — collision-check volume around the UAV
+
+goal_reached_dist: 0.40   # [m] (default 0.6)
+
+# Let the drone set off down an aisle that is not yet fully mapped (treat unknown
+# space as free). Safe here because the reactive bumper is the backstop; revisit
+# if the planner cuts corners through unmapped racks during validation.
+unknown_is_occupied: false

@@ -1,0 +1,77 @@
+<?xml version="1.0"?>
+<!--
+  Obstacle avoidance for the warehouse inspection drone, off the Livox Mid-360
+  already on the airframe (spawn flag 'enable-livox'). Two complementary layers:
+
+    * DELIBERATIVE — pairs_octomap_server builds a live 3D occupancy map from the
+      Mid-360 cloud; pairs_octomap_planner plans collision-free paths through it.
+      Call /<uav>/octomap_planner/goto (pairs_msgs/Vec4 [x,y,z,heading]) to fly
+      AROUND the racks instead of straight through them. The rqt panel's
+      navigation and the `goto` tmux window use this service.
+
+    * REACTIVE — pairs_bumper turns the same Mid-360 cloud into obstacle sectors;
+      the ControlManager's obstacle_bumper (already enabled in the public config,
+      clearance tuned down in config/custom_config.yaml) repels from them. This is
+      the last line of defence when the planner is off or the map is stale.
+
+  RViz: octomap_{global,local}_vis publish occupied-cell MarkerArrays consumed by
+  config/rviz/warehouse.rviz; the bumper sectors render via the Bumper display.
+
+  ⚠ NEEDS A GPU SIM FLIGHT TO TUNE — the narrow-aisle clearances in
+  config/avoidance/*.yaml are first cuts. Verify the drone can still traverse a
+  ~2.6 m aisle (planner doesn't refuse to move, bumper doesn't oscillate).
+-->
+<launch>
+  <arg name="UAV_NAME"       default="$(optenv UAV_NAME uav1)" />
+  <arg name="RUN_TYPE"       default="$(optenv RUN_TYPE simulation)" />
+  <arg name="lidar3d_topic"  default="mid360_cloud_nodelet/points" />
+  <arg name="world_frame_id" default="$(arg UAV_NAME)/world_origin" />
+
+  <!-- ===== Octomap server: Mid-360 cloud -> live 3D occupancy map ===== -->
+  <include file="$(find pairs_octomap_server)/launch/octomap.launch">
+    <arg name="UAV_NAME"           value="$(arg UAV_NAME)" />
+    <arg name="RUN_TYPE"           value="$(arg RUN_TYPE)" />
+    <arg name="standalone"         value="true" />
+    <arg name="custom_config"      value="$(find inspection_core)/config/avoidance/octomap_server.yaml" />
+    <arg name="world_frame_id"     value="$(arg world_frame_id)" />
+    <arg name="lidar_3d_topic_0_in" value="$(arg lidar3d_topic)" />
+  </include>
+
+  <!-- ===== RViz visualisers: occupied-cell MarkerArrays (global + local) ===== -->
+  <include file="$(find pairs_octomap_tools)/launch/octomap_rviz_visualizer.launch">
+    <arg name="UAV_NAME"      value="$(arg UAV_NAME)" />
+    <arg name="standalone"    value="true" />
+    <arg name="node_name"     value="octomap_global_vis" />
+    <arg name="octomap_topic" value="octomap_server/octomap_global_full" />
+  </include>
+  <include file="$(find pairs_octomap_tools)/launch/octomap_rviz_visualizer.launch">
+    <arg name="UAV_NAME"      value="$(arg UAV_NAME)" />
+    <arg name="standalone"    value="true" />
+    <arg name="node_name"     value="octomap_local_vis" />
+    <arg name="octomap_topic" value="octomap_server/octomap_local_full" />
+  </include>
+
+  <!-- ===== Octomap planner: collision-free goto (octomap_planner/goto) ===== -->
+  <include file="$(find pairs_octomap_planner)/launch/octomap_planner.launch">
+    <arg name="UAV_NAME"      value="$(arg UAV_NAME)" />
+    <arg name="standalone"    value="true" />
+    <arg name="custom_config" value="$(find inspection_core)/config/avoidance/octomap_planner.yaml" />
+  </include>
+
+  <!-- ===== Reactive bumper: Mid-360 cloud -> obstacle sectors (ControlManager repels) =====
+       Run the node directly (not bumper.launch) so the only sensor wired in is the
+       Mid-360; the stock launch also expects a front depth cam + a 2D scan + an
+       upward rangefinder this airframe does not carry. -->
+  <group ns="$(arg UAV_NAME)">
+    <node pkg="nodelet" type="nodelet" name="bumper" args="standalone pairs_bumper/Bumper" output="screen">
+      <rosparam file="$(find pairs_bumper)/config/$(arg RUN_TYPE).yaml" />
+      <rosparam file="$(find inspection_core)/config/avoidance/bumper.yaml" />
+      <param name="uav_name"     value="$(arg UAV_NAME)" />
+      <param name="path_to_mask" value="" />
+      <param name="frame_id"     value="$(arg UAV_NAME)/fcu_untilted" />
+      <remap from="~lidar3d_in"          to="$(arg lidar3d_topic)" />
+      <remap from="~lidar1d_down_in"     to="hw_api/distance_sensor" />
+      <remap from="~obstacle_sectors_out" to="~obstacle_sectors" />
+    </node>
+  </group>
+</launch>

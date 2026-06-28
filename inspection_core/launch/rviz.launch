@@ -1,0 +1,20 @@
+<?xml version="1.0"?>
+<!--
+  Warehouse-inspection RViz: the standard PAIRS drone view (robot model, TF,
+  odometry, control reference, trajectory, bumper sectors) PLUS the inspection
+  extras the operator wants to see — the Livox Mid-360 cloud, the live octomap
+  "map" (occupied cells from avoidance.launch), the planned collision-free path,
+  and a tag-detection image. See config/rviz/warehouse.rviz.
+
+  Mirrors pairs_uav_core/rviz.launch: a helper stamps the config with $UAV_NAME
+  into /tmp/warehouse.rviz, then rviz loads it.
+-->
+<launch>
+  <arg name="UAV_NAME" default="$(optenv UAV_NAME uav1)" />
+
+  <group>
+    <node pkg="inspection_core" type="refactor_rviz_config.sh" name="rviz_config_refactor" output="screen" />
+    <node pkg="rviz" type="rviz" name="rviz" args="-d /tmp/warehouse.rviz"
+          launch-prefix="bash -c 'sleep 1; $0 $@' " />
+  </group>
+</launch>

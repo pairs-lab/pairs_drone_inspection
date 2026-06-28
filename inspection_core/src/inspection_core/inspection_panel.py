@@ -1,19 +1,24 @@
 #!/usr/bin/env python
 """PAIRS Inspection rqt panel.
 
-An rqt plugin (mirrors pairs_rqt_control) that replaces the standalone Tkinter
-``relative_navigator`` GUI. It drives the warehouse inspection drone:
+A single rqt plugin that drives the whole warehouse inspection drone, replacing
+both the old standalone Tkinter ``relative_navigator`` GUI *and* the separate
+``pairs_rqt_control`` flight window — everything is now one panel:
 
+* flight control -- arm / offboard / one-click takeoff / land / hover / e-land,
+  and a free ``goto`` (collision-free via the octomap planner, or straight-line);
 * relative rack/bin navigation -- auto-find a rack via its anchor AprilTag,
   zig-zag through the 18 bins, visual-servo to centre each bin tag;
 * precise landing on the charging dock (go-to-dock / land / abort);
 * a live camera feed (tag-detection overlay, front colour/IR, or the down
   landing cam), embedded as a QLabel fed via cv_bridge.
 
-The navigation maths is ported verbatim from relative_navigator.py so behaviour
-is preserved; only the GUI toolkit (Tkinter -> Qt/rqt) and the precise-landing
-controls are new. Long, blocking flight sequences run on worker threads; the
-camera frame is marshalled to the GUI thread with a Qt signal.
+Navigation goto's are routed through ``octomap_planner/goto`` (collision-free,
+routes AROUND the racks) when the planner is up, falling back to the straight
+``control_manager/goto`` otherwise; fine visual-servo nudges always go direct.
+
+Long, blocking flight sequences run on worker threads; the camera frame is
+marshalled to the GUI thread with a Qt signal.
 """
 import math
 import os
@@ -24,17 +29,18 @@ import rospy
 from rqt_gui_py.plugin import Plugin
 from python_qt_binding.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QGridLayout, QGroupBox,
-    QPushButton, QLabel, QComboBox, QLineEdit, QSizePolicy,
+    QPushButton, QLabel, QComboBox, QLineEdit, QSizePolicy, QDoubleSpinBox,
 )
 from python_qt_binding.QtCore import Qt, QTimer, Signal, Slot
 from python_qt_binding.QtGui import QImage, QPixmap
 
-from std_srvs.srv import Trigger
+from std_srvs.srv import Trigger, SetBool
 
 # Optional deps -- keep the plugin importable even if the workspace overlay
 # isn't sourced (matches pairs_rqt_control's graceful-degradation pattern).
 try:
     from pairs_msgs.srv import Vec4, Vec4Request
+    from pairs_msgs.msg import ControlManagerDiagnostics, HwApiStatus
     _HAVE_VEC4 = True
 except Exception:
     _HAVE_VEC4 = False
@@ -101,6 +107,15 @@ class InspectionPanel(Plugin):
         self.last_x, self.last_y, self.last_z = CORRIDOR_X, 0.0, BASE_Z
         self.selected_rack = 3
 
+        # ---- flight status (from pairs_rqt_control) ----
+        self._diag = None
+        self._hw = None
+        self._sub_diag = None
+        self._sub_hw = None
+        # one-click takeoff retry counters
+        self._tk_arm_tries = 0
+        self._tk_loop_tries = 0
+
         self._bridge = CvBridge() if _HAVE_IMG else None
         self._img_sub = None
         self._tag_sub = None
@@ -110,6 +125,7 @@ class InspectionPanel(Plugin):
         self._build_ui(context)
         self._image_ready.connect(self._on_image)
         self._subscribe_tags()
+        self._subscribe_status()
         self._select_feed(0)
 
         self._timer = QTimer()
@@ -132,6 +148,54 @@ class InspectionPanel(Plugin):
         self._uav_edit.editingFinished.connect(self._on_uav_changed)
         row.addWidget(self._uav_edit)
         left.addLayout(row)
+
+        # live flight status line (armed / offboard / tracker / flying)
+        self._flight_status = QLabel(u'—')
+        self._flight_status.setStyleSheet('font-family: monospace; padding: 2px;')
+        left.addWidget(self._flight_status)
+
+        # flight controls (merged from pairs_rqt_control). These bypass the
+        # nav "busy" guard so Hover / E-Land / Land always work mid-mission.
+        g_flight = QGroupBox('Flight')
+        fg = QGridLayout(g_flight)
+        flight_buttons = [
+            ('Arm',       lambda: self._call('hw_api/arming', SetBool, True)),
+            ('Disarm',    lambda: self._call('hw_api/arming', SetBool, False)),
+            ('Offboard',  lambda: self._call('hw_api/offboard', Trigger)),
+            ('Takeoff',   self._takeoff_sequence),
+            ('Land',      lambda: self._call('uav_manager/land', Trigger)),
+            ('Land Home', lambda: self._call('uav_manager/land_home', Trigger)),
+            ('Hover',     lambda: self._call('control_manager/hover', Trigger)),
+            ('E-Land',    lambda: self._call('control_manager/eland', Trigger)),
+        ]
+        for i, (label, cb) in enumerate(flight_buttons):
+            b = QPushButton(label)
+            b.clicked.connect(cb)
+            fg.addWidget(b, i // 4, i % 4)
+        left.addWidget(g_flight)
+
+        # free go-to (collision-free via planner, or straight-line)
+        g_goto = QGroupBox('Go to  (x  y  z  heading)')
+        gg = QGridLayout(g_goto)
+        self._spin = {}
+        for col, (name, default) in enumerate(
+                [('x', 0.0), ('y', 0.0), ('z', 1.5), ('heading', 0.0)]):
+            sb = QDoubleSpinBox()
+            sb.setRange(-1000.0, 1000.0)
+            sb.setDecimals(2)
+            sb.setSingleStep(0.5)
+            sb.setValue(default)
+            self._spin[name] = sb
+            gg.addWidget(QLabel(name), 0, col)
+            gg.addWidget(sb, 1, col)
+        b_avoid = QPushButton('Go To (avoid)')
+        b_avoid.setStyleSheet('font-weight: bold;')
+        b_avoid.clicked.connect(lambda: self._run_bg(self._goto_fields, False))
+        b_direct = QPushButton('Go To (direct)')
+        b_direct.clicked.connect(lambda: self._run_bg(self._goto_fields, True))
+        gg.addWidget(b_avoid, 2, 0, 1, 2)
+        gg.addWidget(b_direct, 2, 2, 1, 2)
+        left.addWidget(g_goto)
 
         # relative navigation
         g_nav = QGroupBox('Relative navigation')
@@ -203,6 +267,10 @@ class InspectionPanel(Plugin):
         context.add_widget(w)
         self._widget = w
 
+        if not _HAVE_VEC4:
+            self._flight_status.setText(
+                'pairs_msgs not found — source the PAIRS workspace before launching')
+
     # -------------------------------------------------------------- UI cbs
     def _selected_bin(self):
         return self._bin_combo.currentIndex() + 1
@@ -212,6 +280,7 @@ class InspectionPanel(Plugin):
         if new != self.uav_name:
             self.uav_name = new
             self._subscribe_tags()
+            self._subscribe_status()
             self._select_feed(self._feed_combo.currentIndex())
 
     def _on_rack_changed(self, idx):
@@ -221,12 +290,26 @@ class InspectionPanel(Plugin):
         self.current_bin = None
 
     def _refresh_status(self):
+        # anchor-tag line
         if self.tag_detected:
             self._status.setText('Locked anchor tag - ready')
             self._status.setStyleSheet('color: green; font-style: italic;')
         else:
             self._status.setText('Not seeing anchor tag')
             self._status.setStyleSheet('color: red; font-style: italic;')
+        # flight line
+        if not _HAVE_VEC4:
+            return
+        parts = ['uav=%s' % self.uav_name]
+        if self._hw is not None:
+            parts.append('armed=%s' % ('Y' if self._hw.armed else 'N'))
+            parts.append('offboard=%s' % ('Y' if self._hw.offboard else 'N'))
+        else:
+            parts.append('hw_api: no data')
+        if self._diag is not None:
+            parts.append('tracker=%s' % self._diag.active_tracker)
+            parts.append('flying=%s' % ('Y' if self._diag.flying_normally else 'N'))
+        self._flight_status.setText('   '.join(parts))
 
     # ----------------------------------------------------------- threading
     def _run_bg(self, fn, *args):
@@ -246,22 +329,44 @@ class InspectionPanel(Plugin):
         threading.Thread(target=wrap, daemon=True).start()
 
     # ------------------------------------------------------------- ROS I/O
-    def _call_trigger(self, srv):
+    def _call(self, srv, srv_type, *args):
+        """Generic service call (flight controls); returns success bool."""
         full = '/%s/%s' % (self.uav_name, srv)
         try:
-            rospy.wait_for_service(full, timeout=3.0)
-            resp = rospy.ServiceProxy(full, Trigger)()
-            rospy.loginfo('%s -> success=%s msg=%s', full, resp.success, resp.message)
-            return resp.success
+            rospy.wait_for_service(full, timeout=2.0)
+            resp = rospy.ServiceProxy(full, srv_type)(*args)
+            ok = bool(getattr(resp, 'success', True))
+            rospy.loginfo('%s -> %s %s', full, 'OK' if ok else 'FAIL',
+                          getattr(resp, 'message', ''))
+            return ok
         except Exception as e:  # noqa: BLE001
             rospy.logerr('%s failed: %s', full, e)
             return False
 
-    def send_flight_command(self, x, y, z, heading):
+    def _call_trigger(self, srv):
+        return self._call(srv, Trigger)
+
+    def _nav_goto_service(self):
+        """Prefer the collision-free planner; fall back to straight-line goto."""
+        planner = '/%s/octomap_planner/goto' % self.uav_name
+        try:
+            rospy.wait_for_service(planner, timeout=0.5)
+            return 'octomap_planner/goto'
+        except Exception:  # noqa: BLE001
+            return 'control_manager/goto'
+
+    def send_flight_command(self, x, y, z, heading, direct=False):
+        """Fly to (x,y,z,heading) in the world frame.
+
+        ``direct=False`` routes through the octomap planner (collision-free)
+        when it is available; ``direct=True`` always uses the straight-line
+        control_manager/goto (for short visual-servo nudges the planner rejects).
+        """
         if not _HAVE_VEC4:
             rospy.logerr('pairs_msgs/Vec4 unavailable; cannot command goto')
             return False, 0.0
-        full = '/%s/control_manager/goto' % self.uav_name
+        srv = 'control_manager/goto' if direct else self._nav_goto_service()
+        full = '/%s/%s' % (self.uav_name, srv)
         try:
             rospy.wait_for_service(full, timeout=5.0)
             req = Vec4Request()
@@ -272,14 +377,81 @@ class InspectionPanel(Plugin):
                                  + (z - self.last_z) ** 2)
                 self.last_x, self.last_y, self.last_z = float(x), float(y), float(z)
                 return True, dist
+            rospy.logwarn('%s rejected: %s', srv, getattr(resp, 'message', ''))
             return False, 0.0
         except Exception as e:  # noqa: BLE001
             rospy.logerr('goto failed: %s', e)
             return False, 0.0
 
+    def _goto_fields(self, direct):
+        x = self._spin['x'].value()
+        y = self._spin['y'].value()
+        z = self._spin['z'].value()
+        h = self._spin['heading'].value()
+        rospy.loginfo('inspection_rqt: goto (%.2f, %.2f, %.2f, %.2f) %s',
+                      x, y, z, h, 'direct' if direct else 'avoid')
+        self.send_flight_command(x, y, z, h, direct=direct)
+
     def _goto_dock(self):
         rospy.loginfo('inspection_rqt: flying over the charging dock (-6, 0, 2)')
         self.send_flight_command(-6.0, 0.0, 2.0, 0.0)
+
+    # ------------------------------------------- one-click takeoff sequence
+    # arm -> control output -> offboard -> takeoff, chained with non-blocking
+    # timers (ported from pairs_rqt_control). PX4 SITL often rejects the first
+    # arm command(s) and drops OFFBOARD on the ground unless takeoff follows
+    # quickly, so the tail retries on failure.
+    def _takeoff_sequence(self):
+        self._tk_arm_tries = 0
+        self._tk_loop_tries = 0
+        rospy.loginfo('takeoff: arming...')
+        self._tk_arm()
+
+    def _tk_arm(self):
+        if (self._hw is not None and self._hw.armed) or self._call('hw_api/arming', SetBool, True):
+            QTimer.singleShot(1500, self._tk_output)
+        elif self._tk_arm_tries < 15:
+            self._tk_arm_tries += 1
+            QTimer.singleShot(1000, self._tk_arm)
+        else:
+            rospy.logerr('takeoff: could not arm after %d attempts', self._tk_arm_tries)
+
+    def _tk_output(self):
+        self._call('control_manager/toggle_output', SetBool, True)
+        QTimer.singleShot(600, self._tk_offboard)
+
+    def _tk_offboard(self):
+        self._call('hw_api/offboard', Trigger)
+        QTimer.singleShot(700, self._tk_takeoff)
+
+    def _tk_takeoff(self):
+        if self._call('uav_manager/takeoff', Trigger):
+            return
+        if self._tk_loop_tries < 4:
+            self._tk_loop_tries += 1
+            QTimer.singleShot(700, self._tk_arm)
+
+    # ------------------------------------------------------ status callbacks
+    def _subscribe_status(self):
+        if not _HAVE_VEC4:
+            return
+        for s in (self._sub_diag, self._sub_hw):
+            if s is not None:
+                s.unregister()
+        self._diag = None
+        self._hw = None
+        self._sub_diag = rospy.Subscriber(
+            '/%s/control_manager/diagnostics' % self.uav_name,
+            ControlManagerDiagnostics, self._on_diag, queue_size=1)
+        self._sub_hw = rospy.Subscriber(
+            '/%s/hw_api/status' % self.uav_name,
+            HwApiStatus, self._on_hw, queue_size=1)
+
+    def _on_diag(self, msg):
+        self._diag = msg
+
+    def _on_hw(self, msg):
+        self._hw = msg
 
     # --------------------------------------------------------- tag callback
     def _subscribe_tags(self):
@@ -359,7 +531,8 @@ class InspectionPanel(Plugin):
                 break
             new_x = self.last_x + (self.servo_error_x * rack_dir * 0.7)
             new_z = self.last_z - (self.servo_error_y * 0.7)
-            self.send_flight_command(new_x, target_y, new_z, heading)
+            # fine centring nudge -> straight-line goto (too short for the planner)
+            self.send_flight_command(new_x, target_y, new_z, heading, direct=True)
             self.servo_error_x = None
             time.sleep(2.5)
         self.servo_active = False
@@ -451,7 +624,7 @@ class InspectionPanel(Plugin):
         self._shutting_down = True
         if getattr(self, '_timer', None) is not None:
             self._timer.stop()
-        for sub in (self._img_sub, self._tag_sub):
+        for sub in (self._img_sub, self._tag_sub, self._sub_diag, self._sub_hw):
             if sub is not None:
                 try:
                     sub.unregister()

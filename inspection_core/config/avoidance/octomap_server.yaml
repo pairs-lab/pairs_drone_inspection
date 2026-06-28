@@ -1,0 +1,25 @@
+# Octomap server overrides for the warehouse — Livox Mid-360, narrow (~2.6 m) aisles.
+# Overlays pairs_octomap_server/config/default.yaml (loaded first by octomap.launch).
+#
+# Finer voxels than the open-field default so rack uprights / pallet edges are
+# resolved instead of being smeared across the aisle, and shorter ranges / smaller
+# maps because everything of interest is within a few metres indoors.
+
+resolution: 0.30   # [m] (default 0.40) — resolve poles/pallets in tight aisles
+
+local_map:
+  size:
+    max_width: 16    # [m] (default 30)
+    max_height: 8    # [m] (default 15)
+    min_width: 10
+    min_height: 6
+
+global_map:
+  size: 50           # [m] (default 80) — a single warehouse bay, not an open field
+
+sensor_params:
+  3d_lidar:
+    n_sensors: 1
+    sensor_0:
+      max_range: 12.0          # [m] (default 20) — indoor ranges are short
+      free_ray_distance: 10.0  # [m] (default 15)

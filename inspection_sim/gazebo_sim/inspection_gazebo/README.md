@@ -65,16 +65,25 @@ roscd inspection_gazebo/tmux/warehouse && ./start.sh     # ./kill.sh to stop
 ```
 
 The session opens, in order, these windows:
-`roscore`, `gazebo`, `status`, `hw_api`, `core`, `precland`, `takeoff`, `goto`, `inspect`,
-`viz`, `kill`. The notable ones:
+`roscore`, `gazebo`, `status`, `hw_api`, `core`, `avoid`, `precland`, `takeoff`, `goto`,
+`inspect`, `viz`, `kill`. The notable ones:
 
+- **`avoid`** — obstacle avoidance off the Livox Mid-360 (`inspection_core avoidance.launch`):
+  `octomap_server` builds a live 3D map, `octomap_planner` serves collision-free `goto`, and
+  `pairs_bumper` feeds the ControlManager's reactive bumper. Without it the drone flies
+  straight-line `goto` and hits the racks.
 - **`precland`** — the `pairs_precise_landing` chain (AprilTag detector → landing-pad LKF →
   descent controller) reading the downward bluefox cam.
+- **`goto`** — pre-loaded history (press Up) for the collision-free `octomap_planner/goto`
+  (use this) and the raw straight-line `control_manager/goto`.
 - **`inspect`** — the rack/bin AprilTag detector (`apriltag.launch`) plus the `inspection_core`
-  rqt operator panel.
-- **`viz`** — merged window: rviz + robot model + rviz interface + `pairs_rqt_control` + i3
-  layout (the former separate rviz / gui / layout windows are consolidated here; the old
-  `dock` window is gone — its go-to-dock / land / abort are now buttons in the rqt panel).
+  rqt operator panel. The panel now also carries the **flight controls** (arm / takeoff /
+  land / hover / e-land / goto) that used to live in the separate `pairs_rqt_control` window.
+- **`viz`** — merged window: RViz (the `inspection_core` warehouse config — octomap map +
+  Mid-360 cloud + planned path) + robot model + rviz interface + i3 layout. The former
+  separate rviz / gui / layout windows are consolidated here; the standalone flight-control
+  GUI is gone (merged into the rqt panel), as is the old `dock` window (its go-to-dock /
+  land / abort are buttons in the panel).
 
 Once the drone is hovering, drive the inspection from the `inspect` window's rqt panel.
 

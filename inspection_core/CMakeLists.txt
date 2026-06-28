@@ -22,3 +22,8 @@ catkin_install_python(PROGRAMS
   scripts/inspection_gui
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
+
+# RViz config refactor helper (stamps $UAV_NAME into warehouse.rviz; used by rviz.launch)
+install(PROGRAMS scripts/refactor_rviz_config.sh
+  DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+)

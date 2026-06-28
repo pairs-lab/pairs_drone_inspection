@@ -56,6 +56,15 @@ read W_core P <<< "$(tmux new-window -t "$SESSION_NAME" -n "core" -P -F '#{windo
 tmux send-keys -t "$P" "$SETUP; "'waitForHw; roslaunch pairs_uav_core core.launch platform_config:=`rospack find pairs_uav_gazebo_simulation`/config/pairs_uav_system/$UAV_TYPE.yaml custom_config:=./config/custom_config.yaml world_config:=./config/world_config.yaml network_config:=./config/network_config.yaml' Enter
 tmux select-layout -t "$W_core" tiled
 
+# ---------------- window: avoid (octomap map + collision-free planner + reactive bumper) ----------------
+# Obstacle avoidance off the Livox Mid-360: octomap_server builds a live 3D map,
+# octomap_planner serves collision-free goto (octomap_planner/goto), pairs_bumper
+# feeds obstacle sectors the ControlManager repels from. Without this the drone
+# flies straight-line goto and crashes into the racks.
+read W_avoid P <<< "$(tmux new-window -t "$SESSION_NAME" -n "avoid" -P -F '#{window_id} #{pane_id}')"
+tmux send-keys -t "$P" "$SETUP; "'waitForControl; roslaunch inspection_core avoidance.launch UAV_NAME:=$UAV_NAME' Enter
+tmux select-layout -t "$W_avoid" tiled
+
 # ---------------- window: precland (apriltag detector + landing-pad LKF + descent controller) ----------------
 # ONE launch transitively starts the detector -> landing_pad_estimation -> precise_landing chain.
 # camera_node/image_topic point at the downward bluefox cam added to the spawn above.
@@ -72,8 +81,10 @@ tmux send-keys -t "$P" "$SETUP; "'waitForControl; until rosservice call /$UAV_NA
 tmux select-layout -t "$W_takeoff" tiled
 
 # ---------------- window: goto (fly down the aisle; centerline y=0, +x) ----------------
+# Two pre-loaded history entries (press Up): the collision-free planner goto (use
+# this — routes around the racks), and the raw straight-line control_manager goto.
 read W_goto P <<< "$(tmux new-window -t "$SESSION_NAME" -n "goto" -P -F '#{window_id} #{pane_id}')"
-tmux send-keys -t "$P" "$SETUP; "'history -s rosservice call /$UAV_NAME/control_manager/goto \"goal: \[3.0, 0.0, 1.5, 0.0\]\"' Enter
+tmux send-keys -t "$P" "$SETUP; "'history -s rosservice call /$UAV_NAME/control_manager/goto \"goal: \[3.0, 0.0, 1.5, 0.0\]\"; history -s rosservice call /$UAV_NAME/octomap_planner/goto \"goal: \[3.0, 0.0, 1.5, 0.0\]\"' Enter
 tmux select-layout -t "$W_goto" tiled
 
 # ---------------- window: inspect (rack/bin AprilTag detector + the operator rqt panel) ----------------
@@ -87,19 +98,19 @@ tmux select-layout -t "$W_inspect" tiled
 tmux send-keys -t "$P" "$SETUP; "'waitForControl; roslaunch inspection_core inspection.launch UAV_NAME:=$UAV_NAME' Enter
 tmux select-layout -t "$W_inspect" tiled
 
-# ---------------- window: viz (merged: rviz + robot model + rviz interface + control GUI + i3 layout) ----------------
-# Consolidates the former separate rviz / gui / layout windows into one split window.
+# ---------------- window: viz (merged: warehouse rviz + robot model + rviz interface + i3 layout) ----------------
+# Consolidates the former separate rviz / gui / layout windows. The flight-control
+# GUI is no longer a separate pane here — it is merged into the inspection panel
+# (inspect window). RViz loads inspection_core's warehouse config (octomap map +
+# Mid-360 cloud + planned path) instead of the stock pairs_uav_core one.
 read W_viz P <<< "$(tmux new-window -t "$SESSION_NAME" -n "viz" -P -F '#{window_id} #{pane_id}')"
-tmux send-keys -t "$P" "$SETUP; "'waitForControl; roslaunch pairs_uav_core rviz.launch' Enter
+tmux send-keys -t "$P" "$SETUP; "'waitForControl; roslaunch inspection_core rviz.launch UAV_NAME:=$UAV_NAME' Enter
 P=$(tmux split-window -t "$W_viz" -P -F '#{pane_id}')
 tmux select-layout -t "$W_viz" tiled
 tmux send-keys -t "$P" "$SETUP; "'waitForControl; roslaunch pairs_rviz_plugins load_robot.launch' Enter
 P=$(tmux split-window -t "$W_viz" -P -F '#{pane_id}')
 tmux select-layout -t "$W_viz" tiled
 tmux send-keys -t "$P" "$SETUP; "'waitForControl; roslaunch pairs_rviz_plugins rviz_interface.launch' Enter
-P=$(tmux split-window -t "$W_viz" -P -F '#{pane_id}')
-tmux select-layout -t "$W_viz" tiled
-tmux send-keys -t "$P" "$SETUP; "'waitForControl; roslaunch pairs_rqt_control control.launch' Enter
 P=$(tmux split-window -t "$W_viz" -P -F '#{pane_id}')
 tmux select-layout -t "$W_viz" tiled
 tmux send-keys -t "$P" "$SETUP; "'waitForControl; sleep 3; ~/.i3/layout_manager.sh ./layout.json' Enter

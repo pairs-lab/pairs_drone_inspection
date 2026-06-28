@@ -1,0 +1,15 @@
+# Bumper overrides for the warehouse — Livox Mid-360 only, narrow aisles.
+# Overlays pairs_bumper/config/simulation.yaml.
+#
+# The bumper is the REACTIVE backstop (the deliberative planner does the routing).
+# The Mid-360 is sparse (few scan lines) so the default voxel_minpoints (15) would
+# discard real returns — lowered here. The include box is shrunk to the aisle so
+# far walls / the floor are ignored.
+
+lidar3d:
+  voxel_size: 0.30
+  voxel_minpoints: 4
+  include_box:
+    use: true
+    offset: [0.0, 0.0, -0.15]
+    size: [10.0, 10.0, 4.0]   # only react to obstacles within ~5 m, ignore floor/ceiling

@@ -1,0 +1,372 @@
+Panels:
+  - Class: rviz/Displays
+    Help Height: 0
+    Name: Displays
+    Property Tree Widget:
+      Expanded:
+        - /Octomap (avoidance)1
+      Splitter Ratio: 0.6970587968826294
+    Tree Height: 361
+  - Class: rviz/Selection
+    Name: Selection
+  - Class: rviz/Tool Properties
+    Expanded:
+      - /2D Pose Estimate1
+      - /2D Nav Goal1
+      - /Publish Point1
+    Name: Tool Properties
+    Splitter Ratio: 0.5886790156364441
+  - Class: rviz/Views
+    Expanded:
+      - /Current View1
+    Name: Views
+    Splitter Ratio: 0.5
+  - Class: rviz/Time
+    Name: Time
+    SyncMode: 0
+    SyncSource: ""
+Preferences:
+  PromptSaveOnExit: true
+Toolbars:
+  toolButtonStyle: 2
+Visualization Manager:
+  Class: ""
+  Displays:
+    - Alpha: 0.20000000298023224
+      Cell Size: 1
+      Class: rviz/Grid
+      Color: 160; 160; 164
+      Enabled: true
+      Line Style:
+        Line Width: 0.029999999329447746
+        Value: Lines
+      Name: Grid
+      Normal Cell Count: 0
+      Offset:
+        X: 0
+        Y: 0
+        Z: 0
+      Plane: XY
+      Plane Cell Count: 100
+      Reference Frame: <Fixed Frame>
+      Value: true
+    - Class: rviz/TF
+      Enabled: false
+      Filter (blacklist): ""
+      Filter (whitelist): ""
+      Frame Timeout: 15
+      Frames:
+        All Enabled: false
+      Marker Alpha: 1
+      Marker Scale: 1
+      Name: TF
+      Show Arrows: true
+      Show Axes: true
+      Show Names: true
+      Tree:
+        {}
+      Update Interval: 0
+      Value: false
+    - Alpha: 1
+      Class: rviz/RobotModel
+      Collision Enabled: false
+      Enabled: true
+      Links:
+        All Links Enabled: true
+        Expand Joint Details: false
+        Expand Link Details: false
+        Expand Tree: false
+        Link Tree Style: Links in Alphabetic Order
+        uav1/fcu:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        uav1/fcu/arms_red:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+      Name: UAVModel
+      Robot Description: /uav1/robot_model
+      TF Prefix: ""
+      Update Interval: 0
+      Value: true
+      Visual Enabled: true
+    - Class: rviz/Group
+      Displays:
+        - Background color: 204; 204; 204
+          Class: pairs_rviz_plugins/Status
+          Computer load: true
+          Control manager: true
+          Custom strings: true
+          Enabled: true
+          Hw api state: true
+          Name: Status
+          Node stats list: false
+          Odometry: true
+          Text color: 0; 0; 0
+          Top Line: true
+          Topic rates: true
+          UAV name: uav1
+          Value: true
+        - Class: rviz/InteractiveMarkers
+          Enable Transparency: true
+          Enabled: true
+          Name: Control Display
+          Show Axes: false
+          Show Descriptions: true
+          Show Visual Aids: false
+          Update Topic: control/update
+          Value: true
+      Enabled: true
+      Name: Status
+    - Class: rviz/Group
+      Displays:
+        - Alpha: 1
+          Autocompute Intensity Bounds: true
+          Autocompute Value Bounds:
+            Max Value: 6.5
+            Min Value: -0.65
+            Value: true
+          Axis: Z
+          Channel Name: intensity
+          Class: rviz/PointCloud2
+          Color: 255; 255; 255
+          Color Transformer: AxisColor
+          Decay Time: 0
+          Enabled: true
+          Invert Rainbow: false
+          Max Color: 255; 255; 255
+          Min Color: 0; 0; 0
+          Name: mid360_lidar
+          Position Transformer: XYZ
+          Queue Size: 10
+          Selectable: true
+          Size (Pixels): 3
+          Size (m): 0.05
+          Style: Flat Squares
+          Topic: /uav1/mid360_cloud_nodelet/points
+          Unreliable: true
+          Use Fixed Frame: true
+          Use rainbow: true
+          Value: true
+        - Class: rviz/Image
+          Enabled: false
+          Image Topic: /uav1/tag_detections_image
+          Max Value: 1
+          Median window: 5
+          Min Value: 0
+          Name: tag_detections
+          Normalize Range: true
+          Queue Size: 2
+          Transport Hint: raw
+          Unreliable: false
+          Value: false
+      Enabled: true
+      Name: Sensors
+    - Class: rviz/Group
+      Displays:
+        - Class: rviz/MarkerArray
+          Enabled: true
+          Marker Topic: /uav1/octomap_global_vis/occupied_cells_vis_array_throttled
+          Name: octomap_global
+          Namespaces:
+            "": true
+          Queue Size: 100
+          Value: true
+        - Class: rviz/MarkerArray
+          Enabled: false
+          Marker Topic: /uav1/octomap_local_vis/occupied_cells_vis_array
+          Name: octomap_local
+          Namespaces:
+            "": true
+          Queue Size: 100
+          Value: false
+      Enabled: true
+      Name: Octomap (avoidance)
+    - Class: rviz/Group
+      Displays:
+        - Class: rviz/MarkerArray
+          Enabled: true
+          Marker Topic: /uav1/control_manager/safety_area_markers
+          Name: SafetyArea
+          Namespaces:
+            "": true
+          Queue Size: 100
+          Value: true
+        - Angle Tolerance: 0.009999999776482582
+          Class: rviz/Odometry
+          Covariance:
+            Orientation:
+              Alpha: 0.5
+              Color: 255; 255; 127
+              Color Style: Unique
+              Frame: Local
+              Offset: 1
+              Scale: 1
+              Value: true
+            Position:
+              Alpha: 0.30000001192092896
+              Color: 204; 51; 204
+              Scale: 1
+              Value: true
+            Value: true
+          Enabled: true
+          Keep: 1
+          Name: control_reference
+          Position Tolerance: 0.009999999776482582
+          Queue Size: 10
+          Shape:
+            Alpha: 1
+            Axes Length: 1
+            Axes Radius: 0.10000000149011612
+            Color: 255; 25; 0
+            Head Length: 0.30000001192092896
+            Head Radius: 0.10000000149011612
+            Shaft Length: 1
+            Shaft Radius: 0.05000000074505806
+            Value: Axes
+          Topic: /uav1/control_manager/control_reference
+          Unreliable: true
+          Value: true
+        - Alpha: 0.10000000149011612
+          Class: pairs_rviz_plugins/Bumper
+          Collision alpha: 0.5
+          Collision color: 255; 0; 0
+          Color: 204; 51; 204
+          Colorize collisions: true
+          Display mode: sensor types
+          Enabled: true
+          History Length: 1
+          Horizontal collision threshold: 1
+          Name: Bumper
+          Queue Size: 10
+          Show sectors with no data: false
+          Show undetected obstacles: true
+          Topic: /uav1/bumper/obstacle_sectors
+          Unreliable: true
+          Value: true
+          Vertical collision threshold: 1
+      Enabled: true
+      Name: ControlManager
+    - Class: rviz/Group
+      Displays:
+        - Angle Tolerance: 0.009999999776482582
+          Class: rviz/Odometry
+          Covariance:
+            Orientation:
+              Alpha: 0.5
+              Color: 255; 255; 127
+              Color Style: Unique
+              Frame: Local
+              Offset: 1
+              Scale: 1
+              Value: true
+            Position:
+              Alpha: 0.30000001192092896
+              Color: 204; 51; 204
+              Scale: 1
+              Value: false
+          Enabled: true
+          Keep: 1
+          Name: odom_main
+          Position Tolerance: 0.009999999776482582
+          Queue Size: 10
+          Shape:
+            Alpha: 1
+            Axes Length: 0.5
+            Axes Radius: 0.10000000149011612
+            Color: 0; 25; 255
+            Head Length: 1
+            Head Radius: 0.30000001192092896
+            Shaft Length: 1
+            Shaft Radius: 0.05000000074505806
+            Value: Axes
+          Topic: /uav1/estimation_manager/odom_main
+          Unreliable: true
+          Value: true
+      Enabled: true
+      Name: EstimationManager
+    - Class: rviz/Group
+      Displays:
+        - Class: rviz/MarkerArray
+          Enabled: true
+          Marker Topic: /uav1/trajectory_generation/markers/final
+          Name: planned_path
+          Namespaces:
+            {}
+          Queue Size: 100
+          Value: true
+      Enabled: true
+      Name: TrajectoryGeneration
+  Enabled: true
+  Global Options:
+    Background Color: 255; 255; 255
+    Default Light: true
+    Fixed Frame: uav1/world_origin
+    Frame Rate: 60
+  Name: root
+  Tools:
+    - Class: rviz/Interact
+      Hide Inactive Objects: true
+    - Class: rviz/MoveCamera
+    - Class: rviz/Select
+    - Class: rviz/FocusCamera
+    - Class: rviz/Measure
+    - Class: rviz/SetGoal
+      Topic: /move_base_simple/goal
+    - Class: rviz/PublishPoint
+      Single click: true
+      Topic: /clicked_point
+    - Class: pairs_rviz_plugins/ControlTool
+    - Class: pairs_rviz_plugins/WaypointPlanner
+      Drone name: uav1
+      Fly now: true
+      Height offset: 0
+      Loop: false
+      Shape: Axes
+      Stop at waypoints: false
+      Topic: trajectory_generation/path
+      Use heading: true
+  Value: true
+  Views:
+    Current:
+      Class: rviz/Orbit
+      Distance: 12.0
+      Enable Stereo Rendering:
+        Stereo Eye Separation: 0.05999999865889549
+        Stereo Focal Distance: 1
+        Swap Stereo Eyes: false
+        Value: false
+      Field of View: 0.7853981852531433
+      Focal Point:
+        X: 0
+        Y: 0
+        Z: 1.2
+      Focal Shape Fixed Size: true
+      Focal Shape Size: 0.05000000074505806
+      Invert Z Axis: false
+      Name: Current View
+      Near Clip Distance: 0.009999999776482582
+      Pitch: 0.5653985559940338
+      Target Frame: uav1/fcu
+      Yaw: 3.0853917598724365
+    Saved: ~
+Window Geometry:
+  Displays:
+    collapsed: false
+  Height: 846
+  Hide Left Dock: false
+  Hide Right Dock: true
+  Selection:
+    collapsed: false
+  Time:
+    collapsed: false
+  Tool Properties:
+    collapsed: true
+  Views:
+    collapsed: true
+  Width: 1500
+  X: 60
+  Y: 60

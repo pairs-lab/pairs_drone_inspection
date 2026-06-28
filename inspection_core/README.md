@@ -20,6 +20,29 @@ The PAIRS stack supplies the rest: `EstimationManager` (LiDAR-inertial + fiducia
 corrections), `ControlManager` (MPC tracker + SE(3)/MPC controllers + bumper + failsafe),
 the OctoMap planner, and the HW API to PX4.
 
+## Obstacle avoidance — off the Livox Mid-360
+
+`config/avoidance/` + `launch/avoidance.launch` add **collision-free flight** in the racked
+aisles, off the Mid-360 already on the airframe (`--enable-livox`). Two layers:
+
+- **Deliberative** — `pairs_octomap_server` builds a live 3D occupancy map; `pairs_octomap_planner`
+  plans paths through it. Call `/<uav>/octomap_planner/goto` (`pairs_msgs/Vec4 [x,y,z,heading]`)
+  to fly *around* the racks. The rqt panel's navigation and the warehouse `goto` window use it.
+- **Reactive** — `pairs_bumper` turns the Mid-360 cloud into obstacle sectors; the
+  ControlManager's `obstacle_bumper` (enabled in the public defaults, clearance tuned down for
+  narrow aisles in the warehouse `custom_config.yaml`) repels from them as the last line of defence.
+
+```bash
+roslaunch inspection_core avoidance.launch        # after the core + Mid-360 are up
+```
+
+The warehouse tmux launches this automatically (the `avoid` window). All avoidance packages
+(`pairs_octomap_*`, `pairs_bumper`, `pairs_subt_planning_lib`) ship in the base PAIRS image.
+
+> **⚠ Needs a GPU sim flight to tune.** The narrow-aisle clearances in `config/avoidance/*.yaml`
+> (planner `safe_obstacle_distance`, bumper min distance) are first cuts — verify the drone can
+> still traverse a ~2.6 m aisle (the planner doesn't refuse to move, the bumper doesn't oscillate).
+
 ## Localization (GPS-denied) — opt-in Point-LIO
 
 `config/localization/` + `launch/localization.launch` add **LiDAR-inertial localization** for the
@@ -50,15 +73,24 @@ ros-noetic-pairs-point-lio-estimator-plugin`.
 
 ## Operator GUI — the rqt panel
 
-`src/inspection_core/inspection_panel.py` is the **rqt control panel** (plugin
-*PAIRS Inspection Control*, under the **PAIRS** plugin group) — the Qt/rqt replacement for
-the old standalone Tkinter `relative_navigator`. It gives the operator:
+`src/inspection_core/inspection_panel.py` is the **single rqt control panel** (plugin
+*PAIRS Inspection Control*, under the **PAIRS** plugin group) — it replaces *both* the old
+standalone Tkinter `relative_navigator` *and* the separate `pairs_rqt_control` flight window.
+It gives the operator:
 
+- **Flight control** (merged from `pairs_rqt_control`) — arm / disarm / offboard / one-click
+  takeoff / land / land-home / hover / e-land, a live armed/offboard/tracker status line, and a
+  free `goto` with *Go To (avoid)* (collision-free via the octomap planner) and *Go To (direct)*.
 - **Relative navigation** — pick a rack (1–6) + bin (1–18): *Auto find rack* (lock the
   rack's anchor AprilTag, ids 101–106), *Move to bin* (zig-zag + visual-servo onto the bin
-  tag), *Scan entire rack* (full 18-bin sweep).
+  tag), *Scan entire rack* (full 18-bin sweep). Coarse moves route through the collision-free
+  planner; fine visual-servo nudges go straight-line.
 - **Precise landing** on the charging dock — *Go to dock* / *LAND* / *ABORT*.
 - **Live camera** — tag-detection overlay, front colour/IR, or the down landing cam.
+
+A matching RViz view ships in `config/rviz/warehouse.rviz` (`roslaunch inspection_core
+rviz.launch`): the standard PAIRS drone view plus the Mid-360 cloud, the live octomap map, the
+planned path, and the bumper sectors.
 
 ```bash
 roslaunch inspection_core inspection.launch        # standalone window (reads $UAV_NAME)
