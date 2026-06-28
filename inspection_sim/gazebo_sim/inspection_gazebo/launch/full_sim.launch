@@ -38,10 +38,12 @@
   <node name="spawn_inspection_uav" pkg="inspection_gazebo" type="spawn_inspection_uav.sh"
         output="screen" args="$(arg uav_id) $(arg uav_type) $(arg sensors)" />
 
-  <node name="relative_navigator_gcs" pkg="inspection_gazebo" type="relative_navigator.py" output="screen">
-    <param name="uav_name" value="uav$(arg uav_id)" />
+  <!-- inspection control GUI: the inspection_core rqt panel (replaces the old Tkinter relative_navigator) -->
+  <node name="inspection_gui" pkg="rqt_gui" type="rqt_gui"
+        args="--standalone inspection_core" output="screen">
+    <env name="UAV_NAME" value="uav$(arg uav_id)" />
   </node>
-  
+
   <include file="$(find inspection_gazebo)/launch/apriltag.launch">
     <arg name="uav_name" value="uav$(arg uav_id)" />
   </include>

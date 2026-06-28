@@ -41,7 +41,8 @@ build_one() {
   done
 }
 
-# inspection_core first (no inspection deps), then inspection_gazebo.
+# inspection_core first (it hosts the rqt panel), then inspection_gazebo (which
+# exec-depends on inspection_core for its full_sim GUI, so it must be installed first).
 build_one /src/pairs_drone_inspection/inspection_core
 build_one /src/pairs_drone_inspection/inspection_sim/gazebo_sim/inspection_gazebo
 

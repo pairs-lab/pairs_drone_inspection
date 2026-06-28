@@ -1,0 +1,16 @@
+<?xml version="1.0"?>
+<!--
+  Open the PAIRS Inspection control panel as a standalone rqt window.
+  UAV_NAME is passed through the environment (the plugin reads $UAV_NAME).
+
+    roslaunch inspection_core inspection.launch
+    roslaunch inspection_core inspection.launch UAV_NAME:=uav1
+-->
+<launch>
+  <arg name="UAV_NAME" default="$(optenv UAV_NAME uav1)"/>
+
+  <node name="inspection_gui" pkg="rqt_gui" type="rqt_gui"
+        args="--standalone inspection_core" output="screen">
+    <env name="UAV_NAME" value="$(arg UAV_NAME)"/>
+  </node>
+</launch>

@@ -76,34 +76,34 @@ read W_goto P <<< "$(tmux new-window -t "$SESSION_NAME" -n "goto" -P -F '#{windo
 tmux send-keys -t "$P" "$SETUP; "'history -s rosservice call /$UAV_NAME/control_manager/goto \"goal: \[3.0, 0.0, 1.5, 0.0\]\"' Enter
 tmux select-layout -t "$W_goto" tiled
 
-# ---------------- window: dock (precision-land on the charging dock at world -6,0) ----------------
-# Pre-staged in shell history (newest first): up-arrow 1 = fly over the dock, 2 = trigger
-# precise landing, 3 = abort (climbs back off the pad). The land service is only accepted
-# while flying_normally with the pad in view, so take off + reach the dock first.
-read W_dock P <<< "$(tmux new-window -t "$SESSION_NAME" -n "dock" -P -F '#{window_id} #{pane_id}')"
-tmux send-keys -t "$P" "$SETUP; "'history -s rosservice call /$UAV_NAME/precise_landing/abort; history -s rosservice call /$UAV_NAME/precise_landing/land; history -s rosservice call /$UAV_NAME/control_manager/goto \"goal: \[-6.0, 0.0, 2.0, 0.0\]\"' Enter
-tmux select-layout -t "$W_dock" tiled
+# ---------------- window: inspect (rack/bin AprilTag detector + the operator rqt panel) ----------------
+# pane 1 = front-camera detector -> /$UAV_NAME/tag_detections (+ tag_detections_image)
+# pane 2 = the rqt operator panel (relative nav + precise-landing buttons + live camera feed).
+# The panel's "Go to dock / LAND / ABORT" buttons replace the old standalone 'dock' CLI window.
+read W_inspect P <<< "$(tmux new-window -t "$SESSION_NAME" -n "inspect" -P -F '#{window_id} #{pane_id}')"
+tmux send-keys -t "$P" "$SETUP; "'waitForControl; roslaunch inspection_gazebo apriltag.launch uav_name:=$UAV_NAME' Enter
+P=$(tmux split-window -t "$W_inspect" -P -F '#{pane_id}')
+tmux select-layout -t "$W_inspect" tiled
+tmux send-keys -t "$P" "$SETUP; "'waitForControl; roslaunch inspection_core inspection.launch UAV_NAME:=$UAV_NAME' Enter
+tmux select-layout -t "$W_inspect" tiled
 
-# ---------------- window: rviz ----------------
-read W_rviz P <<< "$(tmux new-window -t "$SESSION_NAME" -n "rviz" -P -F '#{window_id} #{pane_id}')"
+# ---------------- window: viz (merged: rviz + robot model + rviz interface + control GUI + i3 layout) ----------------
+# Consolidates the former separate rviz / gui / layout windows into one split window.
+read W_viz P <<< "$(tmux new-window -t "$SESSION_NAME" -n "viz" -P -F '#{window_id} #{pane_id}')"
 tmux send-keys -t "$P" "$SETUP; "'waitForControl; roslaunch pairs_uav_core rviz.launch' Enter
-P=$(tmux split-window -t "$W_rviz" -P -F '#{pane_id}')
-tmux select-layout -t "$W_rviz" tiled
+P=$(tmux split-window -t "$W_viz" -P -F '#{pane_id}')
+tmux select-layout -t "$W_viz" tiled
 tmux send-keys -t "$P" "$SETUP; "'waitForControl; roslaunch pairs_rviz_plugins load_robot.launch' Enter
-P=$(tmux split-window -t "$W_rviz" -P -F '#{pane_id}')
-tmux select-layout -t "$W_rviz" tiled
+P=$(tmux split-window -t "$W_viz" -P -F '#{pane_id}')
+tmux select-layout -t "$W_viz" tiled
 tmux send-keys -t "$P" "$SETUP; "'waitForControl; roslaunch pairs_rviz_plugins rviz_interface.launch' Enter
-tmux select-layout -t "$W_rviz" tiled
-
-# ---------------- window: gui (rqt control panel) ----------------
-read W_gui P <<< "$(tmux new-window -t "$SESSION_NAME" -n "gui" -P -F '#{window_id} #{pane_id}')"
+P=$(tmux split-window -t "$W_viz" -P -F '#{pane_id}')
+tmux select-layout -t "$W_viz" tiled
 tmux send-keys -t "$P" "$SETUP; "'waitForControl; roslaunch pairs_rqt_control control.launch' Enter
-tmux select-layout -t "$W_gui" tiled
-
-# ---------------- window: layout ----------------
-read W_layout P <<< "$(tmux new-window -t "$SESSION_NAME" -n "layout" -P -F '#{window_id} #{pane_id}')"
+P=$(tmux split-window -t "$W_viz" -P -F '#{pane_id}')
+tmux select-layout -t "$W_viz" tiled
 tmux send-keys -t "$P" "$SETUP; "'waitForControl; sleep 3; ~/.i3/layout_manager.sh ./layout.json' Enter
-tmux select-layout -t "$W_layout" tiled
+tmux select-layout -t "$W_viz" tiled
 
 # ---------------- window: kill (press enter inside to stop the session) ----------------
 read W_kill P <<< "$(tmux new-window -t "$SESSION_NAME" -n "kill" -P -F '#{window_id} #{pane_id}')"

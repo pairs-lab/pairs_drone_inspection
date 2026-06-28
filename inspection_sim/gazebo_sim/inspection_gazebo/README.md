@@ -9,50 +9,74 @@ the inspection stack.
 - **Six pallet-racking units** forming **3 aisles** (6 levels, 3 bays, ~7 m tall) — blue uprights / orange beams / grey pallets. Each level contains pallets filling all 18 bins per rack.
 - **Unique Anchor AprilTags** (`apriltag_marker`) placed at the start of each rack (IDs 101 to 106) for robust rack identification and relative navigation.
 - **Bin AprilTags** (ID 94) centered inside each bin space to facilitate high-precision visual servoing.
-- **A fiducial charging dock** at the aisle entrance (`x = -6`) for precision-landing tests.
+- **A fiducial charging dock** at the aisle entrance (`x = -6`) carrying the recursive
+  (`tagCustom48h12`) `Apriltag_recursive1` landing pad for precision-landing tests.
 
 Geometry is parameterized in `models/warehouse_rack/generate_rack.py` (re-run to match a
 site survey: bays, levels, pitch, aisle depth).
 
-## Navigation Features (`scripts/relative_navigator.py`)
+## Operator control panel (inspection_core rqt plugin)
 
-This package includes a fully functional, autonomous GUI ground control station that demonstrates a highly robust **Hybrid Navigation System**:
+The operator GUI lives in the **`inspection_core`** package as an rqt plugin — label
+**"PAIRS Inspection Control"** (`inspection_core.inspection_panel.InspectionPanel`), under
+the **PAIRS** rqt plugin group. Launch it standalone, or pull it into any rqt session:
 
-1. **Phase 1: Global Approach (Tìm Kệ)**
-   - The drone uses global coordinates to fly down a safe center-corridor (`X = -5.5`) to the entrance of the selected rack.
-   - It searches for and locks onto the specific Anchor Tag (e.g. ID 103 for Rack 3).
+```bash
+roslaunch inspection_core inspection.launch          # standalone rqt window
+# or:  rosrun inspection_core inspection_gui
+# or inside any rqt:  Plugins -> PAIRS -> PAIRS Inspection Control
+```
 
-2. **Phase 2: Manhattan Zigzag Navigation (Bay Zigzag)**
-   - Using the Anchor Tag as a relative datum, the drone computes the exact positions of all 18 bins.
-   - It employs a true **Lawnmower (Zigzag) Path Planning algorithm** to move safely along the Manhattan Grid (X and Z axes) without colliding into racks.
-   - Supports both flying to a specific bin dynamically, or performing a full autonomous 18-bin scan sequence.
+From the panel you can: **auto-find a rack** via its Anchor Tag (IDs 101 to 106), **zig-zag to
+a bin** or run a full **18-bin zig-zag rack sweep** (visual-servo centering on the bin tag),
+**precise-land on the charging dock** (Go to dock / LAND / ABORT), and watch a **live camera
+feed**.
 
-3. **Phase 3: Visual Servoing (Căn giữa tự động)**
-   - Upon arriving at the calculated bin coordinates, the drone locks onto the nearest Bin Tag (ID 94).
-   - It applies a Proportional (P) Controller using the camera's X and Y pixel errors to dynamically shift the drone's position until the bin tag is perfectly centered in the frame.
+The panel relies on the rack/bin AprilTag detector started by `apriltag.launch` (runs an
+`apriltag_ros` continuous node on the front RealSense `front_rgbd/infra1` stream, publishing
+`/<uav>/tag_detections`):
 
-## The downward ToF
+```bash
+roslaunch inspection_gazebo apriltag.launch uav_name:=uav1
+```
 
-The inspection drone is spawned with `--enable-rangefinder`, which adds the existing
-Garmin down-rangefinder from `x500.sdf.jinja`. It publishes `sensor_msgs/Range` on
-`/<uav>/hw_api/distance_sensor` — exactly the topic the PAIRS EstimationManager's
-garmin/AGL correction consumes. No new sensor code is needed.
+## Sensors
+
+The inspection drone is spawned with four sensor flags:
+
+- `--enable-rangefinder` — downward Garmin ToF from `x500.sdf.jinja`, publishing
+  `sensor_msgs/Range` on `/<uav>/hw_api/distance_sensor` (the AGL topic the PAIRS
+  EstimationManager's garmin correction consumes). No new sensor code is needed.
+- `--enable-livox` — Livox Mid-360 (the primary LiDAR-inertial sensor; localization is
+  sim-GPS today, with Point-LIO LiDAR-inertial as the planned next step).
+- `--enable-realsense-front` — front RGB-D; `apriltag.launch` runs the rack/bin detector on
+  its `front_rgbd/infra1` stream into `/<uav>/tag_detections`.
+- `--enable-bluefox-camera` — downward mono camera that renders the precise-landing fiducial
+  on the charging dock.
 
 ## Run it
 
-**Full bring-up (recommended) — tmux session** (gazebo + world + drone + autonomy core + takeoff),
-mirroring the PAIRS `one_drone_3dlidar` session:
+**Full bring-up (recommended) — tmux session** (gazebo + world + drone + autonomy core +
+precise landing + takeoff + operator panel), mirroring the PAIRS `one_drone_3dlidar` session:
 
 ```bash
 # build + source the workspace first (Noetic / catkin)
 roscd inspection_gazebo/tmux/warehouse && ./start.sh     # ./kill.sh to stop
 ```
 
-Once the simulation starts and the drone is hovering, launch the autonomous GCS:
+The session opens, in order, these windows:
+`roscore`, `gazebo`, `status`, `hw_api`, `core`, `precland`, `takeoff`, `goto`, `inspect`,
+`viz`, `kill`. The notable ones:
 
-```bash
-rosrun inspection_gazebo relative_navigator.py
-```
+- **`precland`** — the `pairs_precise_landing` chain (AprilTag detector → landing-pad LKF →
+  descent controller) reading the downward bluefox cam.
+- **`inspect`** — the rack/bin AprilTag detector (`apriltag.launch`) plus the `inspection_core`
+  rqt operator panel.
+- **`viz`** — merged window: rviz + robot model + rviz interface + `pairs_rqt_control` + i3
+  layout (the former separate rviz / gui / layout windows are consolidated here; the old
+  `dock` window is gone — its go-to-dock / land / abort are now buttons in the rqt panel).
+
+Once the drone is hovering, drive the inspection from the `inspect` window's rqt panel.
 
 **Gazebo only (no autonomy core)** — quick world/sensor check:
 
@@ -60,7 +84,7 @@ rosrun inspection_gazebo relative_navigator.py
 roslaunch inspection_gazebo full_sim.launch                        # gazebo + world + drone
 # or the manual two-step:
 roslaunch inspection_gazebo simulation.launch                      # gazebo + world
-rosrun inspection_gazebo spawn_inspection_uav.sh 1 x500            # spawn drone (+ToF/Livox/cam)
+rosrun inspection_gazebo spawn_inspection_uav.sh 1 x500            # spawn drone (+ToF/Livox/cams)
 ```
 
 Sensor flags are configurable via the `sensors:=` launch arg (passed through to the PAIRS
@@ -87,11 +111,11 @@ entrance (world `-6, 0`):
       estimator_config:=./config/landing_estimator.yaml \
       controller_config:=./config/landing_controller.yaml
   ```
-- **The trigger ("button")** — the `dock` tmux window pre-stages three commands in shell
-  history (press ↑ to recall, newest first):
-  1. `rosservice call /uav1/control_manager/goto "goal: [-6.0, 0.0, 2.0, 0.0]"` — fly over the dock
-  2. `rosservice call /uav1/precise_landing/land`  — start the staged precise descent (`std_srvs/Trigger`)
-  3. `rosservice call /uav1/precise_landing/abort` — climb back off the pad and return to IDLE
+- **The trigger** — the `inspection_core` rqt panel's **Go to dock / LAND / ABORT** buttons
+  drive the same three services (the old standalone `dock` tmux window is gone):
+  1. `/uav1/control_manager/goto "goal: [-6.0, 0.0, 2.0, 0.0]"` — fly over the dock
+  2. `/uav1/precise_landing/land`  — start the staged precise descent (`std_srvs/Trigger`)
+  3. `/uav1/precise_landing/abort` — climb back off the pad and return to IDLE
 
   The land service is only accepted while **flying normally with the pad in view** (state
   machine IDLE → ALIGN → DESCEND → ALIGN2 → LANDING), so take off and reach the dock first.
@@ -104,10 +128,12 @@ entrance (world `-6, 0`):
 
 ```
 inspection_gazebo/
-├── launch/   full_sim.launch (top), simulation.launch (world only)
+├── launch/   full_sim.launch (top), simulation.launch (world only), apriltag.launch (rack/bin detector)
 ├── worlds/   warehouse.world
 ├── models/   warehouse_rack (generated), apriltag_marker (textures)
-├── scripts/  spawn_inspection_uav.sh, relative_navigator.py
-├── config/   tags.yaml
+├── scripts/  spawn_inspection_uav.sh
+├── config/   tags.yaml, settings.yaml
 └── tmux/     warehouse session definitions
+
+The operator GUI now lives in the `inspection_core` package (rqt plugin), not here.
 ```

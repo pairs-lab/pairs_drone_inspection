@@ -1,0 +1,17 @@
+<library path="src">
+  <class name="PAIRS Inspection Control"
+         type="inspection_core.inspection_panel.InspectionPanel"
+         base_class_type="rqt_gui_py::Plugin">
+    <description>
+      Operator panel for the warehouse inspection drone: relative rack/bin
+      navigation, precise landing on the charging dock, and a live camera feed.
+    </description>
+    <qtgui>
+      <group>
+        <label>PAIRS</label>
+      </group>
+      <label>PAIRS Inspection Control</label>
+      <statustip>Drive the warehouse inspection drone from a button panel.</statustip>
+    </qtgui>
+  </class>
+</library>

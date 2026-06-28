@@ -10,11 +10,14 @@ pose, reads the goods label, and the result is reconciled against the inventory 
 ```
 pairs_drone_inspection/
 ├── inspection_core/   mission autonomy ON TOP of PAIRS — semantic BIN map + go-to-BIN logic
+│                      + the operator rqt panel ("PAIRS Inspection Control")
 │                      (control/estimation/planning come from the PAIRS UAV system, not here)
 ├── inspection_sim/
 │   ├── gazebo_sim/    Gazebo Classic 11 warehouse world + inspection drone (inspection_gazebo)
-│   └── isaac_sim/     NVIDIA Isaac Sim 6.0 interactive POC (perception + operator UI)
-└── inspection_real/   real-robot deployment configs (Pixhawk 6X + Jetson Orin NX)
+│   ├── isaac_sim/     NVIDIA Isaac Sim 6.0 interactive POC (perception + operator UI)
+│   └── mujoco_sim/    MuJoCo physics POC (inspection_mujoco_demo)
+└── inspection_real/   real-robot deployment stub (Pixhawk 6X + Jetson Orin NX),
+                       populated during hardware bring-up
 ```
 
 ## Quick start (Gazebo simulation)
@@ -30,7 +33,10 @@ roslaunch inspection_gazebo full_sim.launch
 ```
 
 The drone spawns with a downward ToF (Garmin rangefinder), a Livox Mid-360, and a forward
-camera; the `goto` window flies it down the aisle centerline. See
+camera; the `goto` window flies it down the aisle centerline. The operator drives
+rack/BIN navigation and dock landing from the **PAIRS Inspection Control** rqt panel
+(`roslaunch inspection_core inspection.launch`, or in any rqt session:
+Plugins → PAIRS → PAIRS Inspection Control). See
 [inspection_sim/gazebo_sim/inspection_gazebo/README.md](inspection_sim/gazebo_sim/inspection_gazebo/README.md).
 
 ## Install

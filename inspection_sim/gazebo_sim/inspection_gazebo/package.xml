@@ -13,12 +13,8 @@
 
   <buildtool_depend>catkin</buildtool_depend>
 
-  <!-- Dependencies for Relative Navigation Node -->
-  <depend>rospy</depend>
-  <depend>std_msgs</depend>
-  <depend>geometry_msgs</depend>
-  <depend>apriltag_ros</depend>
-  <depend>pairs_msgs</depend>
+  <!-- AprilTag detector for rack/bin navigation (launch/apriltag.launch) -->
+  <exec_depend>apriltag_ros</exec_depend>
 
   <exec_depend>gazebo_ros</exec_depend>
   <exec_depend>rosservice</exec_depend>
@@ -29,6 +25,9 @@
   <exec_depend>pairs_precise_landing</exec_depend>
   <exec_depend>pairs_landing_pad_estimation</exec_depend>
   <exec_depend>pairs_precise_landing_gazebo</exec_depend>
+  <!-- inspection control GUI (rqt panel) launched by full_sim.launch / the tmux session -->
+  <exec_depend>rqt_gui</exec_depend>
+  <exec_depend>inspection_core</exec_depend>
 
   <export>
     <gazebo_ros gazebo_model_path="${prefix}/models" />

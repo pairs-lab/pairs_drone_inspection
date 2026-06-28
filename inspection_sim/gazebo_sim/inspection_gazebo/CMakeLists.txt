@@ -1,23 +1,9 @@
 cmake_minimum_required(VERSION 3.5)
 project(inspection_gazebo)
 
-# Add necessary libraries for the Python node
-find_package(catkin REQUIRED COMPONENTS
-  rospy
-  std_msgs
-  geometry_msgs
-  apriltag_ros
-)
+find_package(catkin REQUIRED)
 
 catkin_package()
-
-# ==========================================
-# Add Python control node
-catkin_install_python(PROGRAMS
-  scripts/relative_navigator.py
-  DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
-)
-# ==========================================
 
 # Install simulation assets (also makes them available in the .deb).
 # USE_SOURCE_PERMISSIONS keeps the +x bit on tmux/warehouse/{start,kill}.sh; without it
