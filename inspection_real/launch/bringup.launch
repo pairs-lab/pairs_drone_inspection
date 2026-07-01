@@ -5,8 +5,11 @@
   (tmux/warehouse/start.sh) starts these in separate windows; this file is the equivalent
   single include for a scripted/systemd bring-up.
 
-  ⚠ Requires RUN_TYPE=realworld in the environment (so pairs_uav_px4_api api.launch pulls in
-    mavros_realworld.launch and talks to /dev/pixhawk). The tmux/systemd unit export it.
+  ⚠ Requires these env vars set in the environment (the tmux/systemd unit export them):
+      RUN_TYPE=realworld  — so pairs_uav_px4_api api.launch pulls in mavros_realworld.launch
+                            and talks to /dev/pixhawk
+      UAV_MASS=<kg>       — the MEASURED airframe mass; core.launch reads $(env UAV_MASS) on the
+                            realworld branch and has NO default (bringup/core fail without it)
   ⚠ platform_config defaults to the standard x500 model — REPLACE with your measured airframe
     (mass, motor thrust curve, allocation) before any powered flight.
 -->

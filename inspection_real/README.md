@@ -75,7 +75,8 @@ Once hovering, drive the mission from the **inspect** window's rqt panel (same p
    `DISTANCE_SENSOR` streams (it reaches ROS as `mavros/distance_sensor/garmin`).
 4. **Jetson** — flash JetPack (Ubuntu 20.04/arm64); install the PAIRS + inspection stack (arm64,
    see Risks); `sudo rosrun inspection_real install_system.sh`; set `RUN_TYPE=realworld`,
-   `UAV_NAME`, `UAV_TYPE` in the profile.
+   `UAV_NAME`, `UAV_TYPE`, and **`UAV_MASS`** (measured all-up mass in kg — `core.launch` has no
+   default for it on the realworld branch) in the profile / the tmux `start.sh` `PRE_WINDOW`.
 5. **Sensors** — Mid-360 static IP on `eth0` (match `MID360_config.json` + netplan); install
    `realsense2-camera`; set the D455 serial; fit + calibrate the downward camera.
 6. **Extrinsics** — measure `fcu→livox` (in `localization.launch`) and the sensor mount TFs

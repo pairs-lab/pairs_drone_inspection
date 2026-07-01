@@ -15,9 +15,12 @@ SESSION_NAME=warehouse_real
 SCRIPT=$(readlink -f "$0")
 SCRIPTPATH=$(dirname "$SCRIPT")
 
-# environment for every pane. RUN_TYPE=realworld is REQUIRED — it makes pairs_uav_px4_api
-# api.launch include mavros_realworld.launch (/dev/pixhawk:2000000).
-PRE_WINDOW='export UAV_NAME=uav1; export RUN_TYPE=realworld; export UAV_TYPE=x500; export WORLD_NAME=warehouse'
+# environment for every pane.
+#   RUN_TYPE=realworld  -> pairs_uav_px4_api api.launch starts MAVROS (/dev/pixhawk:2000000)
+#   UAV_MASS            -> REQUIRED on the realworld branch of core.launch (uav_manager reads
+#                          $(env UAV_MASS)); there is NO default. ⚠ set the MEASURED all-up mass
+#                          of the real airframe in kg (the 1.5 below is an x500 placeholder).
+PRE_WINDOW='export UAV_NAME=uav1; export RUN_TYPE=realworld; export UAV_TYPE=x500; export WORLD_NAME=warehouse; export UAV_MASS=1.5'
 SETUP="cd $SCRIPTPATH; $PRE_WINDOW"
 
 if [ -n "$TMUX" ]; then echo "Already inside tmux, detach first."; exit 1; fi
