@@ -1,0 +1,24 @@
+# systemd unit to auto-start the inspection stack on boot (optional — for hands-off power-up).
+# Install via scripts/install_system.sh, or:
+#   sudo cp inspection.service /etc/systemd/system/ && sudo systemctl daemon-reload
+#   sudo systemctl enable inspection.service
+# Then attach with:  tmux a -t warehouse_real
+#
+# ⚠ Enable auto-start ONLY once the airframe is validated — the drone will bring up the full
+#   autonomy stack (but does NOT arm/take off on its own; takeoff stays operator-triggered).
+[Unit]
+Description=PAIRS warehouse inspection drone bring-up
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=forking
+User=pairs
+# start.sh creates a detached tmux session; adjust the path to the installed share dir.
+ExecStart=/bin/bash -lc 'roscd inspection_real/tmux/warehouse && ./start.sh'
+ExecStop=/bin/bash -lc 'roscd inspection_real/tmux/warehouse && ./kill.sh'
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

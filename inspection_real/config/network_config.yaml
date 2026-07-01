@@ -1,0 +1,7 @@
+# Single-robot network config for the real inspection drone.
+# robot_names MUST match the hostnames in /etc/hosts and the UAV_NAME env on the Jetson.
+network:
+
+  robot_names: [
+    uav1,
+  ]

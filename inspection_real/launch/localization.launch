@@ -1,0 +1,30 @@
+<?xml version="1.0"?>
+<!--
+  REAL GPS-denied localization: PAIRS Point-LIO on the physical Livox Mid-360.
+  Unlike the sim (inspection_core/localization.launch, which relays a faked gazebo cloud),
+  this drives the REAL Livox driver: pairs_point_lio_core/point_lio_livox_mid360.launch
+  starts livox_ros_driver2 (MID360) + the CustomMsg->PointCloud2 converter + the Point-LIO
+  mapping node, publishing point_lio/odom that the EstimationManager's point_lio plugin fuses
+  (see config/custom_config.yaml).
+
+  Point-LIO is launched with livox_frame:=<uav>/livox so the sensor frame matches the
+  `transform.from_frame: "livox"` corrections in custom_config.yaml.
+
+  ⚠ MEASURE the fcu->livox mount offset on the real airframe and set it below (the sim used
+    a 0.10 m placeholder). ⚠ Set the Mid-360 + Jetson IPs in config/drivers/MID360_config.json.
+-->
+<launch>
+  <arg name="UAV_NAME"     default="$(optenv UAV_NAME uav1)" />
+  <arg name="livox_config" default="$(find inspection_real)/config/drivers/MID360_config.json" />
+
+  <!-- MEASURED Pixhawk-FCU -> Mid-360 mount extrinsic (x fwd, y left, z up, then r p y).
+       TODO: replace 0 0 0.10 0 0 0 with the value measured on the physical airframe. -->
+  <node pkg="tf2_ros" type="static_transform_publisher" name="fcu_to_livox_tf"
+        args="0 0 0.10 0 0 0 $(arg UAV_NAME)/fcu $(arg UAV_NAME)/livox" />
+
+  <include file="$(find pairs_point_lio_core)/launch/point_lio_livox_mid360.launch">
+    <arg name="UAV_NAME"     value="$(arg UAV_NAME)" />
+    <arg name="livox_config" value="$(arg livox_config)" />
+    <arg name="livox_frame"  value="$(arg UAV_NAME)/livox" />
+  </include>
+</launch>

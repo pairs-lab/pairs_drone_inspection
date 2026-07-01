@@ -1,0 +1,53 @@
+<?xml version="1.0"?>
+<!--
+  Real sensor bring-up for the inspection drone (everything EXCEPT the Livox Mid-360, which
+  is owned by localization.launch via Point-LIO). Publishes the airframe sensor TFs and
+  optionally the forward RealSense + downward landing camera.
+
+  Topic parity: the real drivers publish the SAME topics the sim spawner faked, so the
+  inspection_core mission layer binds unchanged:
+    - front RealSense D455  -> /<uav>/front_rgbd/{color,infra1,aligned_depth_to_color}/*
+    - downward landing cam   -> /<uav>/bluefox_optflow/image_raw  (pairs_precise_landing reads this)
+    - downward Garmin ToF    -> arrives via PX4 -> mavros/distance_sensor/garmin -> hw_api
+                                (NO ROS driver here); we only publish its fcu->garmin TF.
+
+  ⚠ Every static TF below is a PLACEHOLDER — measure the real sensor mounts on the airframe.
+-->
+<launch>
+  <arg name="UAV_NAME"       default="$(optenv UAV_NAME uav1)" />
+  <arg name="use_realsense"  default="true" />   <!-- forward D455 (needs ros-noetic-realsense2-camera) -->
+  <arg name="use_down_cam"   default="false" />  <!-- site-specific downward landing camera driver -->
+  <arg name="realsense_serial" default="" />
+
+  <group ns="$(arg UAV_NAME)">
+
+    <!-- downward Garmin ToF frame (the range itself comes over MAVLink, not a driver here).
+         Downward-facing: pitch +90 deg. TODO: measure the mount offset. -->
+    <node pkg="tf2_ros" type="static_transform_publisher" name="fcu_to_garmin_tf"
+          args="0.0 0.0 -0.05 0 1.5707963 0 $(arg UAV_NAME)/fcu $(arg UAV_NAME)/garmin" />
+
+    <!-- forward RealSense body link (optical frames are published by the driver relative to this) -->
+    <node if="$(arg use_realsense)" pkg="tf2_ros" type="static_transform_publisher" name="fcu_to_front_rgbd_tf"
+          args="0.12 0.0 0.0 0 0 0 $(arg UAV_NAME)/fcu $(arg UAV_NAME)/front_rgbd_link" />
+
+    <!-- downward landing camera frame (points down: pitch +90 deg) -->
+    <node if="$(arg use_down_cam)" pkg="tf2_ros" type="static_transform_publisher" name="fcu_to_downcam_tf"
+          args="0.0 0.0 -0.06 0 1.5707963 0 $(arg UAV_NAME)/fcu $(arg UAV_NAME)/bluefox_optflow" />
+
+  </group>
+
+  <!-- forward RealSense D455 driver (separate file so its $(find realsense2_camera) is only
+       resolved when actually enabled; keeps the stack launchable without the driver) -->
+  <include if="$(arg use_realsense)" file="$(find inspection_real)/launch/realsense_front.launch">
+    <arg name="UAV_NAME"  value="$(arg UAV_NAME)" />
+    <arg name="serial_no" value="$(arg realsense_serial)" />
+  </include>
+
+  <!-- Downward landing camera: site-specific. Bring up a driver publishing
+       /<uav>/bluefox_optflow/image_raw (+ camera_info) and enable use_down_cam. Example:
+    <node ns="$(arg UAV_NAME)" if="$(arg use_down_cam)" pkg="usb_cam" type="usb_cam_node" name="bluefox_optflow">
+      <param name="video_device" value="/dev/downcam" />
+      <remap from="~image_raw" to="bluefox_optflow/image_raw" />
+    </node>
+  -->
+</launch>

@@ -1,0 +1,29 @@
+<?xml version="1.0"?>
+<!--
+  One-shot autonomy-core bring-up for the real drone: PX4 hw_api (MAVROS<->Pixhawk 6X) +
+  status + the PAIRS core with the four real config files. The warehouse tmux
+  (tmux/warehouse/start.sh) starts these in separate windows; this file is the equivalent
+  single include for a scripted/systemd bring-up.
+
+  ⚠ Requires RUN_TYPE=realworld in the environment (so pairs_uav_px4_api api.launch pulls in
+    mavros_realworld.launch and talks to /dev/pixhawk). The tmux/systemd unit export it.
+  ⚠ platform_config defaults to the standard x500 model — REPLACE with your measured airframe
+    (mass, motor thrust curve, allocation) before any powered flight.
+-->
+<launch>
+  <arg name="UAV_NAME" default="$(optenv UAV_NAME uav1)" />
+  <arg name="UAV_TYPE" default="$(optenv UAV_TYPE x500)" />
+  <arg name="platform_config"
+       default="$(find pairs_uav_gazebo_simulation)/config/pairs_uav_system/$(arg UAV_TYPE).yaml" />
+
+  <include file="$(find pairs_uav_px4_api)/launch/api.launch" />
+
+  <include file="$(find pairs_uav_status)/launch/status.launch" />
+
+  <include file="$(find pairs_uav_core)/launch/core.launch">
+    <arg name="platform_config" value="$(arg platform_config)" />
+    <arg name="custom_config"   value="$(find inspection_real)/config/custom_config.yaml" />
+    <arg name="world_config"    value="$(find inspection_real)/config/worlds/world_warehouse.yaml" />
+    <arg name="network_config"  value="$(find inspection_real)/config/network_config.yaml" />
+  </include>
+</launch>

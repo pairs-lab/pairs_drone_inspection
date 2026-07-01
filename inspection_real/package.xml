@@ -1,0 +1,36 @@
+<?xml version="1.0"?>
+<package format="2">
+  <name>inspection_real</name>
+  <version>0.0.0</version>
+  <description>
+    Real-robot deployment layer for the warehouse cycle-count inspection drone — the
+    on-hardware counterpart of inspection_sim. Ships the per-airframe configs, the real
+    sensor + hw_api + SLAM + avoidance + inspection launch/tmux, and the Jetson Orin NX
+    system bring-up (udev/netplan/chrony/systemd + preflight), all running the same
+    inspection_core mission layer on the PAIRS UAV system. Mirrors pairs_uav_deployment.
+  </description>
+
+  <maintainer email="canhthanh@vnu.edu.vn">Thanh Nguyen Canh</maintainer>
+  <license>BSD</license>
+
+  <buildtool_depend>catkin</buildtool_depend>
+
+  <!-- the mission layer + the PAIRS runtime this deployment drives -->
+  <exec_depend>inspection_core</exec_depend>
+  <exec_depend>pairs_uav_core</exec_depend>
+  <exec_depend>pairs_uav_px4_api</exec_depend>
+  <exec_depend>pairs_uav_status</exec_depend>
+  <exec_depend>pairs_uav_autostart</exec_depend>
+  <!-- GPS-denied localization + obstacle avoidance (also pulled in by inspection_core at runtime) -->
+  <exec_depend>pairs_point_lio_core</exec_depend>
+  <exec_depend>livox_ros_driver2</exec_depend>
+  <!-- MAVLink bridge to the Pixhawk 6X + fiducial detector for rack/bin reading -->
+  <exec_depend>mavros</exec_depend>
+  <exec_depend>apriltag_ros</exec_depend>
+  <exec_depend>pairs_precise_landing</exec_depend>
+  <exec_depend>topic_tools</exec_depend>
+  <exec_depend>tf2_ros</exec_depend>
+  <!-- NOTE: the Intel RealSense driver (ros-noetic-realsense2-camera) is NOT a hard dep — it
+       is not in the base image and must be apt-installed on the arm64 Jetson; sensors.launch
+       guards the RealSense group so the stack still comes up without it. -->
+</package>

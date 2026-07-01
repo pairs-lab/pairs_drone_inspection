@@ -1,0 +1,20 @@
+# udev rules for the inspection drone's USB/serial devices on the Jetson Orin NX.
+# Install:  sudo cp 99-inspection-sensors.rules /etc/udev/rules.d/ && sudo udevadm control --reload && sudo udevadm trigger
+#
+# The Livox Mid-360 is ETHERNET (no udev rule — set its static IP via netplan).
+# Confirm your device ids with:  udevadm info -a -n /dev/ttyACM0  (or lsusb).
+
+# --- Pixhawk 6X flight controller ---
+# If over USB (CDC-ACM, Holybro/PX4 vendor 3162:004b) -> /dev/pixhawk :
+SUBSYSTEM=="tty", ATTRS{idVendor}=="3162", ATTRS{idProduct}=="004b", SYMLINK+="pixhawk", MODE="0666", GROUP="dialout"
+# If over an FTDI USB-serial adapter (0403:6011/6015) -> /dev/pixhawk :
+SUBSYSTEM=="tty", ATTRS{idVendor}=="0403", ATTRS{idProduct}=="6011", SYMLINK+="pixhawk", MODE="0666", GROUP="dialout"
+# If over the Jetson 40-pin UART instead of USB, use pairs_uav_deployment/miscellaneous/
+# udev_rules/99-jetson-serial.rules (KERNEL=="ttyTHS*") — verify the Orin NX UART index.
+
+# --- downward landing camera (USB) — set the real vendor/product ---
+# SUBSYSTEM=="tty", ATTRS{idVendor}=="xxxx", ATTRS{idProduct}=="yyyy", SYMLINK+="downcam", MODE="0666"
+
+# --- Intel RealSense D455 ---
+# librealsense ships its own /lib/udev/rules.d/99-realsense-libusb.rules (install librealsense2-dkms);
+# no rule needed here beyond that.

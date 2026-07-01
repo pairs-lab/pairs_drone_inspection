@@ -1,0 +1,22 @@
+# Jetson Orin NX network for the inspection drone.
+# Install: sudo cp 01-inspection-net.yaml /etc/netplan/ && sudo netplan apply
+#
+# eth0 is the WIRED link to the Livox Mid-360 — the Jetson host IP here MUST match the
+# host_net_info.*_ip fields in config/drivers/MID360_config.json, and be on the Mid-360's
+# subnet. wlan0 is the operator/GCS link (optional). Flight must NOT depend on wlan0.
+network:
+  version: 2
+  renderer: networkd
+  ethernets:
+    eth0:
+      dhcp4: false
+      addresses:
+        - 192.168.1.5/24   # Jetson host IP on the Livox subnet (== MID360_config.json)
+      optional: true
+  wifis:
+    wlan0:
+      dhcp4: true
+      optional: true
+      access-points:
+        "YOUR_GCS_SSID":
+          password: "YOUR_GCS_PASSWORD"

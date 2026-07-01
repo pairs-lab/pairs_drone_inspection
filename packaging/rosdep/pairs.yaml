@@ -4,6 +4,10 @@ inspection_core:
   ubuntu: [ros-noetic-inspection-core]
 inspection_gazebo:
   ubuntu: [ros-noetic-inspection-gazebo]
+inspection_real:
+  ubuntu: [ros-noetic-inspection-real]
+pairs_uav_px4_api:
+  ubuntu: [ros-noetic-pairs-uav-px4-api]
 pairs_gazebo_common_resources:
   ubuntu: [ros-noetic-pairs-gazebo-common-resources]
 pairs_msgs:

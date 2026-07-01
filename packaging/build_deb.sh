@@ -45,6 +45,10 @@ build_one() {
 # exec-depends on inspection_core for its full_sim GUI, so it must be installed first).
 build_one /src/pairs_drone_inspection/inspection_core
 build_one /src/pairs_drone_inspection/inspection_sim/gazebo_sim/inspection_gazebo
+# inspection_real: the on-hardware deployment layer (configs/launch/tmux/scripts). Built last;
+# exec-depends on inspection_core (installed above). Its runtime driver deps (livox, realsense,
+# mavros, ...) live on the deploy target, not necessarily in this amd64 packaging container.
+build_one /src/pairs_drone_inspection/inspection_real
 
 echo "=================================================================="
 echo " Done. Built packages in /output:"

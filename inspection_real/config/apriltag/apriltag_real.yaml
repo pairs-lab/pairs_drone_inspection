@@ -1,0 +1,30 @@
+# AprilTag detector config for the REAL forward camera (rack/bin anchor tags).
+# Loaded into apriltag_ros_continuous_node by launch/apriltag.launch. This is the
+# rack-anchor detector (NOT the downward tagCustom48h12 landing pad — that stays with
+# pairs_precise_landing).
+#
+# ⚠ Set the REAL printed tag size(s) in metres and the REAL surveyed anchor ids. The ids
+#   101..106 below match inspection_core's RACKS_CONFIG default; re-key both to your site.
+#   tag36h11 is the recommended family for printed anchors (robust, standard).
+
+tag_family: 'tag36h11'
+tag_threads: 2
+tag_decimate: 1.0
+tag_blur: 0.0
+tag_refine_edges: 1
+tag_debug: 0
+max_hamming_dist: 2
+publish_tf: true
+
+# Each rack gets one surveyed anchor tag; `size` is the PRINTED black-square edge in metres.
+standalone_tags:
+  [
+    {id: 101, size: 0.16, name: rack1_anchor},
+    {id: 102, size: 0.16, name: rack2_anchor},
+    {id: 103, size: 0.16, name: rack3_anchor},
+    {id: 104, size: 0.16, name: rack4_anchor},
+    {id: 105, size: 0.16, name: rack5_anchor},
+    {id: 106, size: 0.16, name: rack6_anchor}
+  ]
+
+tag_bundles: []

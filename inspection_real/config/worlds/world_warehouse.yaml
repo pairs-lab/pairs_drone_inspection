@@ -1,0 +1,38 @@
+# Real warehouse world / safety area — GPS-DENIED indoor site.
+# Unlike the sim (LATLON 47.39/8.54 Zurich placeholder), there is no GPS datum indoors:
+# the world_origin is a LOCAL metric frame anchored at the drone's power-on/takeoff spot
+# (established by Point-LIO). Keep units LATLON with a 0,0 origin so the manager treats it
+# as a local frame (same convention as pairs_uav_deployment/config/worlds/world_local.yaml).
+#
+# ⚠ MEASURE and set the real values before flight:
+#   - safety_area polygon = the flyable warehouse footprint (metres, in world_origin), a bit
+#     inside the physical walls. The example below is a placeholder 30 x 16 m bay.
+#   - vertical max_z = warehouse clear height minus rotor margin; min_z ~ 0.5 m.
+world_origin:
+
+  units: "LATLON"   # {"UTM", "LATLON"}  -- 0,0 => treated as a local metric origin
+  origin_x: 0.0
+  origin_y: 0.0
+
+safety_area:
+
+  enabled: true
+
+  horizontal:
+
+    frame_name: "world_origin"
+
+    # x, y [m] in world_origin — the flyable warehouse footprint (TODO: survey the real bay)
+    points: [
+      -15.0,  -8.0,
+       15.0,  -8.0,
+       15.0,   8.0,
+      -15.0,   8.0,
+    ]
+
+  vertical:
+
+    frame_name: "world_origin"
+
+    max_z: 5.0   # [m] TODO: warehouse clear height minus rotor margin
+    min_z: 0.5   # [m]

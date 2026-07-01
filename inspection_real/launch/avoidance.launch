@@ -1,0 +1,24 @@
+<?xml version="1.0"?>
+<!--
+  REAL obstacle avoidance — a thin wrapper over inspection_core/avoidance.launch (octomap
+  server + planner + reactive bumper), repointed at the physical Livox Mid-360 cloud and the
+  real estimator's world frame. RUN_TYPE=realworld makes the bumper load
+  pairs_bumper/config/realworld.yaml.
+
+  ⚠ lidar3d_topic: the PointCloud2 produced by Point-LIO's pcl_livox_to_ros conversion. Confirm
+    the actual topic with `rostopic list` after localization.launch is up and adjust if needed.
+  ⚠ world_frame_id: the EstimationManager control/world frame (same as the mission/panel goto
+    frame). Keep world_origin unless a hardware flight shows the octomap needs mapping_origin.
+-->
+<launch>
+  <arg name="UAV_NAME"       default="$(optenv UAV_NAME uav1)" />
+  <arg name="lidar3d_topic"  default="livox/points" />
+  <arg name="world_frame_id" default="$(arg UAV_NAME)/world_origin" />
+
+  <include file="$(find inspection_core)/launch/avoidance.launch">
+    <arg name="UAV_NAME"       value="$(arg UAV_NAME)" />
+    <arg name="RUN_TYPE"       value="realworld" />
+    <arg name="lidar3d_topic"  value="$(arg lidar3d_topic)" />
+    <arg name="world_frame_id" value="$(arg world_frame_id)" />
+  </include>
+</launch>

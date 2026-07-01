@@ -1,0 +1,28 @@
+<?xml version="1.0"?>
+<!--
+  Forward Intel RealSense D455 bring-up in the front_rgbd namespace so the topics match the
+  sim (front_rgbd/color/image_raw, front_rgbd/infra1/image_raw, front_rgbd/aligned_depth_to_color/*)
+  that inspection_core's panel + the rack/bin AprilTag detector consume.
+
+  Requires ros-noetic-realsense2-camera on the target (NOT in the base image — apt-install it
+  on the arm64 Jetson). Included from sensors.launch only when use_realsense:=true, so the
+  rest of the stack still comes up if the driver is absent.
+-->
+<launch>
+  <arg name="UAV_NAME"      default="$(optenv UAV_NAME uav1)" />
+  <arg name="serial_no"     default="" />   <!-- TODO: the D455 serial number -->
+
+  <include file="$(find realsense2_camera)/launch/rs_camera.launch" ns="$(arg UAV_NAME)">
+    <arg name="camera"        value="front_rgbd" />
+    <arg name="tf_prefix"     value="$(arg UAV_NAME)/front_rgbd" />
+    <arg name="serial_no"     value="$(arg serial_no)" />
+    <arg name="enable_color"  value="true" />
+    <arg name="enable_depth"  value="true" />
+    <arg name="enable_infra1" value="true" />
+    <arg name="enable_infra2" value="true" />
+    <arg name="align_depth"   value="true" />
+    <arg name="color_width"   value="1280" />
+    <arg name="color_height"  value="720" />
+    <arg name="color_fps"     value="30" />
+  </include>
+</launch>
